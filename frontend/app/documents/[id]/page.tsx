@@ -12,7 +12,9 @@ import {
   exportDownloadUrl,
   getDocument,
   getFields,
+  getLatestOcrBlocks,
   getOcrBlocks,
+  pageImageUrl,
   runOcr
 } from "../../../lib/api";
 import { EditableFieldsPanel } from "../../../components/editable-fields-panel";
@@ -25,10 +27,12 @@ export default function DocumentReviewPage({ params }: { params: Promise<{ id: s
   const [exportJob, setExportJob] = useState<ExportJob | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
 
   async function refresh() {
     setDocument(await getDocument(id));
     setFields(await getFields(id));
+    setBlocks(await getLatestOcrBlocks(id));
   }
 
   useEffect(() => {
@@ -63,7 +67,7 @@ export default function DocumentReviewPage({ params }: { params: Promise<{ id: s
     }
   }
 
-  async function handleExport(format: "json" | "csv") {
+  async function handleExport(format: "json" | "csv" | "xlsx") {
     setBusy(true);
     try {
       setExportJob(await createExport(id, format));
@@ -102,6 +106,9 @@ export default function DocumentReviewPage({ params }: { params: Promise<{ id: s
         <button className="button secondary" disabled={busy || fields.length === 0} onClick={() => handleExport("csv")}>
           Export CSV
         </button>
+        <button className="button secondary" disabled={busy || fields.length === 0} onClick={() => handleExport("xlsx")}>
+          Export XLSX
+        </button>
         {message ? <span className="muted">{message}</span> : null}
       </div>
 
@@ -116,10 +123,24 @@ export default function DocumentReviewPage({ params }: { params: Promise<{ id: s
 
       <div className="grid">
         <section className="surface">
-          <h2>OCR blocks</h2>
+          <h2>Page image and OCR blocks</h2>
+          {document.pages[0] ? (
+            <PageEvidence
+              page={document.pages[0]}
+              blocks={blocks}
+              activeBlockId={activeBlockId}
+            />
+          ) : (
+            <p className="muted">No page image available.</p>
+          )}
+          <h3>OCR text</h3>
           {blocks.length === 0 ? <p className="muted">Run OCR to see OCR text blocks.</p> : null}
           {blocks.map((block) => (
-            <div className="ocr-block" key={block.id}>
+            <div
+              className={`ocr-block ${activeBlockId === block.id ? "active" : ""}`}
+              key={block.id}
+              onClick={() => setActiveBlockId(block.id)}
+            >
               <strong>{block.text}</strong>
               <div className="muted">confidence {(block.confidence * 100).toFixed(0)}%</div>
             </div>
@@ -129,5 +150,43 @@ export default function DocumentReviewPage({ params }: { params: Promise<{ id: s
         <EditableFieldsPanel documentId={id} fields={fields} onChanged={refresh} />
       </div>
     </>
+  );
+}
+
+function PageEvidence({
+  page,
+  blocks,
+  activeBlockId
+}: {
+  page: DocumentDetail["pages"][number];
+  blocks: OcrBlock[];
+  activeBlockId: string | null;
+}) {
+  const pageBlocks = blocks.filter((block) => block.page_number === page.page_number);
+  const width = page.width || 1;
+  const height = page.height || 1;
+
+  return (
+    <div className="page-preview">
+      <img src={pageImageUrl(page.id)} alt={`Page ${page.page_number}`} />
+      {pageBlocks.map((block) => {
+        const bbox = block.bbox as { x?: number; y?: number; width?: number; height?: number };
+        if (bbox.x == null || bbox.y == null || bbox.width == null || bbox.height == null) {
+          return null;
+        }
+        return (
+          <div
+            key={block.id}
+            className={`bbox ${activeBlockId === block.id ? "active" : ""}`}
+            style={{
+              left: `${(bbox.x / width) * 100}%`,
+              top: `${(bbox.y / height) * 100}%`,
+              width: `${(bbox.width / width) * 100}%`,
+              height: `${(bbox.height / height) * 100}%`
+            }}
+          />
+        );
+      })}
+    </div>
   );
 }

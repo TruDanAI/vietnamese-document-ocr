@@ -16,6 +16,8 @@ export type DocumentDetail = DocumentItem & {
     id: string;
     page_number: number;
     image_path: string | null;
+    width: number | null;
+    height: number | null;
   }>;
 };
 
@@ -28,6 +30,7 @@ export type OcrRun = {
 
 export type OcrBlock = {
   id: string;
+  page_number: number | null;
   block_index: number;
   text: string;
   confidence: number;
@@ -88,6 +91,10 @@ export async function getOcrBlocks(ocrRunId: string): Promise<OcrBlock[]> {
   return apiFetch<OcrBlock[]>(`/ocr-runs/${ocrRunId}/blocks`);
 }
 
+export async function getLatestOcrBlocks(documentId: string): Promise<OcrBlock[]> {
+  return apiFetch<OcrBlock[]>(`/documents/${documentId}/ocr-blocks`);
+}
+
 export async function getFields(documentId: string): Promise<ExtractedField[]> {
   return apiFetch<ExtractedField[]>(`/documents/${documentId}/fields`);
 }
@@ -104,7 +111,7 @@ export async function approveDocument(documentId: string): Promise<{ ok: boolean
   return apiFetch(`/documents/${documentId}/review/approve`, { method: "POST" });
 }
 
-export async function createExport(documentId: string, format: "json" | "csv"): Promise<ExportJob> {
+export async function createExport(documentId: string, format: "json" | "csv" | "xlsx"): Promise<ExportJob> {
   return apiFetch<ExportJob>(`/documents/${documentId}/exports`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -114,4 +121,8 @@ export async function createExport(documentId: string, format: "json" | "csv"): 
 
 export function exportDownloadUrl(exportId: string): string {
   return `${API_BASE_URL}/exports/${exportId}/download`;
+}
+
+export function pageImageUrl(pageId: string): string {
+  return `${API_BASE_URL}/documents/pages/${pageId}/image`;
 }

@@ -6,8 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_db
-from app.models import Document, DocumentPage, ExtractedField, ExtractionRun
-from app.schemas.document import DocumentDetailResponse, DocumentResponse, ExtractedFieldResponse
+from app.models import Document, DocumentPage, ExtractedField, ExtractionRun, OcrBlock, OcrRun
+from app.schemas.document import DocumentDetailResponse, DocumentResponse, ExtractedFieldResponse, OcrBlockResponse
 from app.services.preprocessing import UnsupportedDocumentError, create_page_images
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -111,5 +111,30 @@ def get_document_fields(document_id: str, db: Session = Depends(get_db)) -> list
             select(ExtractedField)
             .where(ExtractedField.extraction_run_id == latest_run.id)
             .order_by(ExtractedField.field_name.asc())
+        ).all()
+    )
+
+
+@router.get("/{document_id}/ocr-blocks", response_model=list[OcrBlockResponse])
+def get_latest_document_ocr_blocks(document_id: str, db: Session = Depends(get_db)) -> list[OcrBlock]:
+    document = db.get(Document, document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    latest_run = db.scalar(
+        select(OcrRun)
+        .where(OcrRun.document_id == document_id)
+        .order_by(OcrRun.started_at.desc())
+        .limit(1)
+    )
+    if latest_run is None:
+        return []
+
+    return list(
+        db.scalars(
+            select(OcrBlock)
+            .options(selectinload(OcrBlock.page))
+            .where(OcrBlock.ocr_run_id == latest_run.id)
+            .order_by(OcrBlock.block_index.asc())
         ).all()
     )
