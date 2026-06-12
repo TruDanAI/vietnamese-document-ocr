@@ -7,6 +7,6 @@ def build_ocr_adapter(engine_name: str) -> OcrAdapter:
     normalized = engine_name.lower().strip()
     if normalized == "mock":
         return MockOcrAdapter()
-    if normalized == "paddleocr":
+    if normalized in {"paddle", "paddleocr"}:
         return PaddleOcrAdapter()
     raise ValueError(f"Unsupported OCR engine: {engine_name}")

@@ -1,6 +1,9 @@
 from pathlib import Path
+from io import BytesIO
 
+import fitz
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from app.config import Settings
 from app.main import create_app
@@ -13,6 +16,22 @@ def make_client(tmp_path: Path) -> TestClient:
         ocr_engine="mock",
     )
     return TestClient(create_app(settings))
+
+
+def demo_png_bytes() -> bytes:
+    output = BytesIO()
+    image = Image.new("RGB", (900, 500), color="white")
+    image.save(output, format="PNG")
+    return output.getvalue()
+
+
+def demo_pdf_bytes() -> bytes:
+    pdf = fitz.open()
+    page = pdf.new_page(width=595, height=842)
+    page.insert_text((72, 72), "CONG TY TNHH MINH AN\nMST: 0312345678")
+    content = pdf.tobytes()
+    pdf.close()
+    return content
 
 
 def test_health_starts_empty(tmp_path: Path) -> None:
@@ -30,7 +49,7 @@ def test_upload_ocr_review_approve_export_workflow(tmp_path: Path) -> None:
 
     upload = client.post(
         "/documents/upload",
-        files={"file": ("demo-invoice.txt", b"demo content", "text/plain")},
+        files={"file": ("demo-invoice.png", demo_png_bytes(), "image/png")},
     )
     assert upload.status_code == 201
     document_id = upload.json()["id"]
@@ -42,6 +61,7 @@ def test_upload_ocr_review_approve_export_workflow(tmp_path: Path) -> None:
     detail = client.get(f"/documents/{document_id}")
     assert detail.status_code == 200
     assert detail.json()["pages"][0]["page_number"] == 1
+    assert detail.json()["pages"][0]["width"] == 900
 
     ocr_run = client.post(f"/documents/{document_id}/ocr-runs")
     assert ocr_run.status_code == 201
@@ -77,3 +97,37 @@ def test_upload_ocr_review_approve_export_workflow(tmp_path: Path) -> None:
     csv_export = client.post(f"/documents/{document_id}/exports", json={"format": "csv"})
     assert csv_export.status_code == 201
     assert Path(csv_export.json()["storage_path"]).exists()
+
+    xlsx_export = client.post(f"/documents/{document_id}/exports", json={"format": "xlsx"})
+    assert xlsx_export.status_code == 201
+    assert Path(xlsx_export.json()["storage_path"]).exists()
+
+
+def test_pdf_upload_creates_rendered_page_image(tmp_path: Path) -> None:
+    client = make_client(tmp_path)
+
+    upload = client.post(
+        "/documents/upload",
+        files={"file": ("demo-invoice.pdf", demo_pdf_bytes(), "application/pdf")},
+    )
+
+    assert upload.status_code == 201
+    document_id = upload.json()["id"]
+    detail = client.get(f"/documents/{document_id}")
+    assert detail.status_code == 200
+    page = detail.json()["pages"][0]
+    assert page["page_number"] == 1
+    assert page["width"] > 0
+    assert page["height"] > 0
+
+
+def test_unsupported_upload_returns_clear_error(tmp_path: Path) -> None:
+    client = make_client(tmp_path)
+
+    upload = client.post(
+        "/documents/upload",
+        files={"file": ("notes.txt", b"plain text is not a page image", "text/plain")},
+    )
+
+    assert upload.status_code == 400
+    assert "Unsupported file type" in upload.json()["detail"]

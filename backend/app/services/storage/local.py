@@ -8,8 +8,10 @@ class LocalStorageService:
         self.root = root
         self.uploads_dir = root / "uploads"
         self.exports_dir = root / "exports"
+        self.pages_dir = root / "pages"
         self.uploads_dir.mkdir(parents=True, exist_ok=True)
         self.exports_dir.mkdir(parents=True, exist_ok=True)
+        self.pages_dir.mkdir(parents=True, exist_ok=True)
 
     def save_upload(self, filename: str, content: bytes) -> str:
         safe_name = self._safe_filename(filename or "document.bin")
@@ -22,6 +24,18 @@ class LocalStorageService:
         safe_name = self._safe_filename(filename)
         path = self.exports_dir / safe_name
         path.write_text(content, encoding="utf-8")
+        return str(path)
+
+    def write_export_bytes(self, filename: str, content: bytes) -> str:
+        safe_name = self._safe_filename(filename)
+        path = self.exports_dir / safe_name
+        path.write_bytes(content)
+        return str(path)
+
+    def write_page_image(self, document_id: str, page_number: int, content: bytes) -> str:
+        safe_document_id = self._safe_filename(document_id)
+        path = self.pages_dir / f"{safe_document_id}-page-{page_number:03d}.png"
+        path.write_bytes(content)
         return str(path)
 
     @staticmethod

@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.api.deps import get_db
 from app.models import Document, ExtractedField, ExtractionRun, OcrBlock, OcrRun
@@ -91,5 +91,10 @@ def get_ocr_blocks(ocr_run_id: str, db: Session = Depends(get_db)) -> list[OcrBl
     if ocr_run is None:
         raise HTTPException(status_code=404, detail="OCR run not found.")
     return list(
-        db.scalars(select(OcrBlock).where(OcrBlock.ocr_run_id == ocr_run_id).order_by(OcrBlock.block_index.asc())).all()
+        db.scalars(
+            select(OcrBlock)
+            .options(joinedload(OcrBlock.page))
+            .where(OcrBlock.ocr_run_id == ocr_run_id)
+            .order_by(OcrBlock.block_index.asc())
+        ).all()
     )

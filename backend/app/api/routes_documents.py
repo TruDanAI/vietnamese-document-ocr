@@ -1,10 +1,14 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_db
 from app.models import Document, DocumentPage, ExtractedField, ExtractionRun
 from app.schemas.document import DocumentDetailResponse, DocumentResponse, ExtractedFieldResponse
+from app.services.preprocessing import UnsupportedDocumentError, create_page_images
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -32,13 +36,28 @@ async def upload_document(
     )
     db.add(document)
     db.flush()
-    db.add(
-        DocumentPage(
+
+    try:
+        pages = create_page_images(
             document_id=document.id,
-            page_number=1,
-            image_path=storage_path,
+            storage_path=storage_path,
+            content_type=document.content_type,
+            storage=request.app.state.storage,
         )
-    )
+    except UnsupportedDocumentError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    for page in pages:
+        db.add(
+            DocumentPage(
+                document_id=document.id,
+                page_number=page["page_number"],
+                image_path=page["image_path"],
+                width=page["width"],
+                height=page["height"],
+            )
+        )
     db.commit()
     db.refresh(document)
     return document
@@ -57,6 +76,19 @@ def get_document(document_id: str, db: Session = Depends(get_db)) -> Document:
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found.")
     return document
+
+
+@router.get("/pages/{page_id}/image")
+def get_page_image(page_id: str, db: Session = Depends(get_db)) -> FileResponse:
+    page = db.get(DocumentPage, page_id)
+    if page is None:
+        raise HTTPException(status_code=404, detail="Document page not found.")
+    if not page.image_path:
+        raise HTTPException(status_code=404, detail="Document page has no image.")
+    path = Path(page.image_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Document page image is missing.")
+    return FileResponse(path=path, media_type="image/png", filename=path.name)
 
 
 @router.get("/{document_id}/fields", response_model=list[ExtractedFieldResponse])

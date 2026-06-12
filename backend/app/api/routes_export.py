@@ -34,7 +34,10 @@ def create_export(
 
     content, extension = build_export_content(document, fields, payload.format)
     filename = f"{document.id}.{extension}"
-    storage_path = request.app.state.storage.write_export(filename, content)
+    if isinstance(content, bytes):
+        storage_path = request.app.state.storage.write_export_bytes(filename, content)
+    else:
+        storage_path = request.app.state.storage.write_export(filename, content)
     job = ExportJob(
         document_id=document.id,
         format=payload.format,

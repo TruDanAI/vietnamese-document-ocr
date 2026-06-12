@@ -51,6 +51,7 @@ class OcrBlockResponse(BaseModel):
     id: str
     ocr_run_id: str
     page_id: str
+    page_number: int | None = None
     block_index: int
     text: str
     confidence: float
@@ -82,7 +83,7 @@ class FieldUpdateRequest(BaseModel):
 
 
 class ExportRequest(BaseModel):
-    format: str = Field(pattern="^(json|csv)$")
+    format: str = Field(pattern="^(json|csv|xlsx)$")
 
 
 class ExportJobResponse(BaseModel):

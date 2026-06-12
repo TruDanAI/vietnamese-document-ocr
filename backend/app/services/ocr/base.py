@@ -6,6 +6,8 @@ class OcrBlockResult:
     text: str
     confidence: float
     bbox: dict
+    page_number: int
+    block_index: int
 
 
 class OcrAdapter:

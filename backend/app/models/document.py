@@ -81,6 +81,10 @@ class OcrBlock(Base):
     ocr_run: Mapped[OcrRun] = relationship(back_populates="blocks")
     page: Mapped[DocumentPage] = relationship(back_populates="ocr_blocks")
 
+    @property
+    def page_number(self) -> int | None:
+        return self.page.page_number if self.page else None
+
 
 class ExtractionRun(Base):
     __tablename__ = "extraction_runs"
