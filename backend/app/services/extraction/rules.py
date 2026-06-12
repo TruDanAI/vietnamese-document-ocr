@@ -34,7 +34,7 @@ def extract_fields(blocks: list[OcrBlock]) -> list[ExtractedFieldResult]:
     tax_code = _find(r"(?:MST|Mã số thuế|Ma so thue|Tax code)\s*[:\-]?\s*([0-9\-]{8,20})", text)
     document_number = _find_document_number(blocks)
     document_date = _find(r"(?:Ngày giao|Ngay giao|Ngày|Ngay|Date)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})", text)
-    subtotal = _find_amount(r"(?:Tạm tính|Tam tinh|Cộng tiền hàng|Cong tien hang|Subtotal|Tiền hàng|Tien hang)\s*[:\-]?\s*([0-9.,]+)", text)
+    subtotal = _find_amount(r"(?:Tạm tính|Tam tinh|Cộng tiền hàng|Cong tien hang|Subtotal|Tiền hàng|Tien hang|Thành tiền|Thanh tien)\s*[:\-]?\s*([0-9.,]+)", text)
     vat_amount = _find_amount(r"(?:VAT|Thuế GTGT|Thue GTGT)\s*[:\-]?\s*([0-9.,]+)", text)
     total_amount = _find_amount(r"(?:Tổng thanh toán|Tong thanh toán|Tong thanh toan|Tổng cộng|Tong cong|Total|Thanh toán|Thanh toan)\s*[:\-]?\s*([0-9.,]+)", text)
     currency = _find(r"\b(VND|VNĐ|USD)\b", text) or "VND"

@@ -52,6 +52,13 @@ export type ExportJob = {
   status: string;
 };
 
+export type EvaluationReport = {
+  filename: string;
+  format: string;
+  size_bytes: number;
+  modified_at: number;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -125,4 +132,12 @@ export function exportDownloadUrl(exportId: string): string {
 
 export function pageImageUrl(pageId: string): string {
   return `${API_BASE_URL}/documents/pages/${pageId}/image`;
+}
+
+export async function listEvaluationReports(): Promise<EvaluationReport[]> {
+  return apiFetch<EvaluationReport[]>("/evaluations/reports");
+}
+
+export function evaluationReportUrl(filename: string): string {
+  return `${API_BASE_URL}/evaluations/reports/${encodeURIComponent(filename)}`;
 }

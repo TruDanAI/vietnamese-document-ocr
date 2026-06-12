@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "supplier_name": "KHO HANG HOA VIET",
+    "tax_code": "0311112222",
+    "document_number": "PXK-2026-77",
+    "document_date": "03/06/2026",
+    "subtotal": "780000",
+    "vat_amount": "78000",
+    "total_amount": "858000",
+    "currency": "VND",
+    "notes": "Giao hang truoc 17h"
+  }
+}

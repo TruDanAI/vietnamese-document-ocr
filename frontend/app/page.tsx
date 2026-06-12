@@ -8,9 +8,14 @@ export default function HomePage() {
       </div>
       <div className="surface">
         <p>Upload chứng từ, chạy OCR mock, review fields và export JSON/CSV.</p>
-        <Link className="button" href="/documents">
-          Open documents
-        </Link>
+        <div className="toolbar">
+          <Link className="button" href="/documents">
+            Open documents
+          </Link>
+          <Link className="button secondary" href="/evaluations">
+            Evaluation reports
+          </Link>
+        </div>
       </div>
     </>
   );

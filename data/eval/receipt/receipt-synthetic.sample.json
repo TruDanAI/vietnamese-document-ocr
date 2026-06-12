@@ -1,0 +1,6 @@
+{
+  "sample_id": "receipt-synthetic",
+  "document_type": "receipt",
+  "source_file": "../../samples/receipt-synthetic.png",
+  "expected_file": "../expected/receipt-synthetic.expected.json"
+}

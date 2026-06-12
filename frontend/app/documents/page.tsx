@@ -27,6 +27,11 @@ export default function DocumentsPage() {
       <div className="header">
         <h1>Documents</h1>
       </div>
+      <div className="section toolbar">
+        <Link className="link" href="/evaluations">
+          Evaluation reports
+        </Link>
+      </div>
 
       <section className="section">
         <DocumentUploader onUploaded={refresh} />

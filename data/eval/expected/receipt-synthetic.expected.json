@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "supplier_name": "CUA HANG ANH DAO",
+    "tax_code": "0109998888",
+    "document_number": "RC-0099",
+    "document_date": "01/05/2026",
+    "subtotal": "250000",
+    "vat_amount": "0",
+    "total_amount": "250000",
+    "currency": "VND",
+    "notes": "Bien lai ban le synthetic"
+  }
+}

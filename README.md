@@ -204,6 +204,115 @@ Safe synthetic samples live under `data/samples/`:
 These files do not contain real customer, citizen ID, tax, invoice, or private
 business data.
 
+## Evaluation Dataset
+
+Evaluation fixtures live under `data/eval/`:
+
+```text
+data/eval/
+  invoice/
+    invoice-synthetic.sample.json
+  receipt/
+    receipt-synthetic.sample.json
+  delivery_note/
+    delivery-note-synthetic.sample.json
+  expected/
+    invoice-synthetic.expected.json
+    receipt-synthetic.expected.json
+    delivery-note-synthetic.expected.json
+```
+
+Each `*.sample.json` declares:
+
+```json
+{
+  "sample_id": "invoice-synthetic",
+  "document_type": "invoice",
+  "source_file": "../../samples/invoice-synthetic.png",
+  "expected_file": "../expected/invoice-synthetic.expected.json"
+}
+```
+
+Each expected JSON contains:
+
+```json
+{
+  "fields": {
+    "supplier_name": "CONG TY TNHH MINH AN",
+    "tax_code": "0312345678",
+    "document_number": "HD-2026-001",
+    "document_date": "12/06/2026",
+    "subtotal": "1000000",
+    "vat_amount": "100000",
+    "total_amount": "1100000",
+    "currency": "VND",
+    "notes": "Du lieu demo, khong phai thong tin that"
+  }
+}
+```
+
+## Run Evaluation
+
+Mock mode:
+
+```powershell
+cd backend
+python -m app.evaluation.run --engine mock
+```
+
+PaddleOCR mode:
+
+```powershell
+cd backend
+python -m pip install paddleocr
+python -m app.evaluation.run --engine paddle
+```
+
+Reports are written to:
+
+```text
+storage/dev/eval_reports/
+```
+
+The runner writes:
+
+- JSON report: machine-readable full field comparisons.
+- Markdown report: quick human-readable summary.
+
+The frontend also has a small report list at:
+
+```text
+http://localhost:3000/evaluations
+```
+
+### How To Read Metrics
+
+- `exact_match_accuracy`: strict value match after trimming only.
+- `normalized_match_accuracy`: field-aware comparison. Money removes dots,
+  commas, spaces, and currency symbols; dates normalize to ISO format; tax codes
+  remove spaces/dashes; currency maps `VNĐ` to `VND`; text ignores accents,
+  case, and repeated spaces.
+- `missing_field_count`: expected value exists but extraction returned empty.
+- `wrong_field_count`: extraction returned a value, but normalized comparison
+  failed.
+- document pass/fail: all expected fields pass normalized comparison.
+
+### Current Mock Baseline
+
+Current synthetic dataset baseline after Milestone 3 rules:
+
+```text
+Documents passed: 3/3
+Exact match accuracy: 100.00%
+Normalized match accuracy: 100.00%
+Missing fields: 0
+Wrong fields: 0
+```
+
+The key rule improvement in this milestone is treating `Thành tiền` /
+`Thanh tien` as a subtotal-like value for delivery-note style documents. Without
+that alias, the delivery-note subtotal fixture would be the first known miss.
+
 ## Demo Workflow
 
 1. Start backend.
@@ -248,14 +357,20 @@ npm run build
 - XLSX export is intentionally simple and only includes metadata plus extracted
   fields.
 - PaddleOCR mode is optional and may need local dependency troubleshooting.
+- Evaluation results in mock mode measure pipeline correctness, not real OCR
+  accuracy, because mock OCR emits deterministic synthetic text.
+- The current dataset is too small to claim production accuracy.
+- Known weak fields for real OCR are likely `supplier_name`, `notes`, and
+  monetary fields when table layout splits labels and values across lines.
 - No authentication or multi-user workflow yet.
 - No PII workflow. Do not upload real CCCD or sensitive customer documents.
 - No RAG, vector database, chatbot, Fanpage, or Zalo integration.
 
 ## Next Recommended Milestone
 
-- Verify PaddleOCR on a small Vietnamese sample set and record install issues.
-- Add field-level confidence and correction-rate reporting.
-- Improve bbox overlay for multi-page PDFs.
+- Expand the synthetic evaluation dataset to 20-30 files across receipts,
+  invoices, delivery notes, and price-list-like documents.
+- Run PaddleOCR mode on those samples and document installation/runtime issues.
 - Add document-type-specific extraction templates.
-- Add a small evaluation command for sample OCR/extraction fixtures.
+- Add correction-rate reporting from real review edits.
+- Improve multi-page review UX only after evaluation shows it matters.

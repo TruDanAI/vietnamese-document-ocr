@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_documents import router as documents_router
+from app.api.routes_evaluation import router as evaluation_router
 from app.api.routes_export import router as export_router
 from app.api.routes_health import router as health_router
 from app.api.routes_ocr import router as ocr_router
@@ -37,6 +38,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(ocr_router)
     app.include_router(review_router)
     app.include_router(export_router)
+    app.include_router(evaluation_router)
     return app
 
 

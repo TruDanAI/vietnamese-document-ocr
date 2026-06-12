@@ -1,0 +1,6 @@
+{
+  "sample_id": "invoice-synthetic",
+  "document_type": "invoice",
+  "source_file": "../../samples/invoice-synthetic.png",
+  "expected_file": "../expected/invoice-synthetic.expected.json"
+}

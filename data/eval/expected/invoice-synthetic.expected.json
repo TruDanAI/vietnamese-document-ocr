@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "supplier_name": "CONG TY TNHH MINH AN",
+    "tax_code": "0312345678",
+    "document_number": "HD-2026-001",
+    "document_date": "12/06/2026",
+    "subtotal": "1000000",
+    "vat_amount": "100000",
+    "total_amount": "1100000",
+    "currency": "VND",
+    "notes": "Du lieu demo, khong phai thong tin that"
+  }
+}
