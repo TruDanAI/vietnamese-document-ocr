@@ -13,12 +13,13 @@ Current flow:
 Upload file
 -> create document + page record
 -> store original file under storage/dev/uploads
+-> normalize image uploads or render PDF pages to storage/dev/pages
 -> run OCR through an adapter
 -> store OCR blocks with bbox + confidence
 -> extract structured fields with simple rules
 -> review/edit extracted fields
 -> approve document
--> export JSON or CSV
+-> export JSON, CSV, or XLSX
 ```
 
 Out of scope for this milestone:
@@ -30,8 +31,8 @@ Out of scope for this milestone:
 - production OCR accuracy claims
 
 The default OCR engine is `mock`, so the app works without PaddleOCR. A
-PaddleOCR adapter stub exists behind `OCR_ENGINE=paddleocr`, but PaddleOCR setup
-is not required for the skeleton.
+PaddleOCR adapter exists behind `OCR_ENGINE=paddle` or `OCR_ENGINE=paddleocr`,
+but PaddleOCR setup is optional and not required for the main demo.
 
 ## Repository Layout
 
@@ -39,7 +40,7 @@ is not required for the skeleton.
 backend/   FastAPI API, SQLite database, OCR/extraction/export services, tests
 frontend/  Next.js review UI
 storage/   local dev uploads and exports
-data/      sample data placeholder
+data/      safe synthetic sample documents
 docs/      project notes placeholder
 ```
 
@@ -69,6 +70,42 @@ STORAGE_DIR=../storage/dev
 OCR_ENGINE=mock
 ```
 
+### Mock OCR Mode
+
+Mock mode is the default and is the expected path for local development:
+
+```powershell
+$env:OCR_ENGINE="mock"
+uvicorn app.main:app --reload
+```
+
+Mock OCR returns deterministic synthetic blocks. It is useful for testing the
+pipeline, review UI, correction logs, and exports without installing any OCR
+runtime.
+
+### PaddleOCR Mode
+
+PaddleOCR is optional. Install it only when you want to test real OCR locally:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python -m pip install paddleocr
+$env:OCR_ENGINE="paddle"
+uvicorn app.main:app --reload
+```
+
+Notes:
+
+- Official PaddleOCR docs recommend installing the `paddleocr` package from
+  PyPI for local inference.
+- PaddleOCR may install large dependencies and model files on first use.
+- Windows setups can fail because of PaddlePaddle/PaddleOCR wheel, Python,
+  CPU/GPU, or native dependency differences. Keep `OCR_ENGINE=mock` as the
+  fallback.
+- This milestone does not tune PP-OCRv6 model selection. The adapter is a spike
+  path, not a production OCR guarantee.
+
 ## Frontend Setup
 
 ```powershell
@@ -96,7 +133,7 @@ Upload:
 
 ```powershell
 curl.exe -X POST "http://127.0.0.1:8000/documents/upload" `
-  -F "file=@sample.txt"
+  -F "file=@../data/samples/invoice-synthetic.png"
 ```
 
 List documents:
@@ -147,18 +184,38 @@ curl.exe -X POST "http://127.0.0.1:8000/documents/{document_id}/exports" `
   -d "{\"format\":\"csv\"}"
 ```
 
+Export XLSX:
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/documents/{document_id}/exports" `
+  -H "Content-Type: application/json" `
+  -d "{\"format\":\"xlsx\"}"
+```
+
+## Sample Documents
+
+Safe synthetic samples live under `data/samples/`:
+
+- `invoice-synthetic.png`
+- `invoice-synthetic.pdf`
+- `receipt-synthetic.png`
+- `delivery-note-synthetic.png`
+
+These files do not contain real customer, citizen ID, tax, invoice, or private
+business data.
+
 ## Demo Workflow
 
 1. Start backend.
 2. Start frontend.
 3. Open `http://localhost:3000/documents`.
-4. Upload any small demo file.
+4. Upload `data/samples/invoice-synthetic.png` or `data/samples/invoice-synthetic.pdf`.
 5. Open the document detail page.
 6. Click `Run OCR`.
 7. Review extracted fields.
 8. Edit one field and click `Save`.
 9. Click `Approve`.
-10. Export JSON or CSV and download the result.
+10. Export JSON, CSV, or XLSX and download the result.
 
 ## Tests
 
@@ -170,7 +227,7 @@ pytest
 Expected current result:
 
 ```text
-2 passed
+7 passed
 ```
 
 Frontend verification:
@@ -185,18 +242,20 @@ npm run build
 
 - Mock OCR returns deterministic demo blocks; it does not inspect the uploaded
   file content.
-- PDF page rendering is not implemented yet. Milestone 1 creates one page record
-  for each upload.
-- Extraction is rule-based and only handles a narrow demo text shape.
-- No Excel export yet; JSON and CSV are implemented first.
+- Image uploads are normalized to PNG. PDF uploads are rendered to PNG pages.
+- Extraction is rule-based and only handles a narrow set of invoice, receipt,
+  and delivery-note labels.
+- XLSX export is intentionally simple and only includes metadata plus extracted
+  fields.
+- PaddleOCR mode is optional and may need local dependency troubleshooting.
 - No authentication or multi-user workflow yet.
 - No PII workflow. Do not upload real CCCD or sensitive customer documents.
 - No RAG, vector database, chatbot, Fanpage, or Zalo integration.
 
 ## Next Recommended Milestone
 
-- Add real image/PDF preprocessing and page rendering.
-- Add PaddleOCR installation notes and a verified adapter path.
-- Add bbox overlay in the review UI.
-- Add more field-level tests and correction-rate evaluation.
-- Add Excel export after JSON/CSV flow is stable.
+- Verify PaddleOCR on a small Vietnamese sample set and record install issues.
+- Add field-level confidence and correction-rate reporting.
+- Improve bbox overlay for multi-page PDFs.
+- Add document-type-specific extraction templates.
+- Add a small evaluation command for sample OCR/extraction fixtures.
