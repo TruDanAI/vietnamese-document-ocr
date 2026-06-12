@@ -17,7 +17,7 @@ def test_normalization_functions_handle_vietnamese_business_values() -> None:
     assert normalize_money("1.100.000 VND") == "1100000"
     assert normalize_money("1,100,000") == "1100000"
     assert normalize_currency("VNĐ") == "VND"
-    assert normalize_tax_code("031-234 5678") == "0312345678"
+    assert normalize_tax_code("000-000 0000") == "0000000000"
     assert normalize_date("12-06-2026") == "2026-06-12"
     assert normalize_text("CÔNG   TY") == "cong ty"
 
@@ -25,7 +25,7 @@ def test_normalization_functions_handle_vietnamese_business_values() -> None:
 def test_field_comparison_marks_missing_and_wrong_fields() -> None:
     expected = {
         "supplier_name": "CONG TY A",
-        "tax_code": "031-234 5678",
+        "tax_code": "000-000 0000",
         "document_number": "HD-01",
         "document_date": "12/06/2026",
         "subtotal": "1000000",
@@ -36,7 +36,7 @@ def test_field_comparison_marks_missing_and_wrong_fields() -> None:
     }
     actual = [
         ExtractedFieldResult("supplier_name", "Công ty A", "Công ty A", 0.8, []),
-        ExtractedFieldResult("tax_code", "0312345678", "0312345678", 0.8, []),
+        ExtractedFieldResult("tax_code", "0000000000", "0000000000", 0.8, []),
         ExtractedFieldResult("document_number", "HD-02", "HD-02", 0.8, []),
         ExtractedFieldResult("document_date", None, None, 0.0, []),
         ExtractedFieldResult("subtotal", "1.000.000", "1.000.000", 0.8, []),

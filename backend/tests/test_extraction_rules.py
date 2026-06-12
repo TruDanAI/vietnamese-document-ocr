@@ -25,7 +25,7 @@ def test_extracts_invoice_like_vietnamese_fields() -> None:
     fields = fields_from_lines(
         [
             "Đơn vị bán: CÔNG TY TNHH MINH AN",
-            "Mã số thuế: 0312345678",
+            "Mã số thuế: 0000000000",
             "Số hóa đơn: HD-2026-001",
             "Ngày: 12/06/2026",
             "Cộng tiền hàng: 1.000.000 VND",
@@ -36,7 +36,7 @@ def test_extracts_invoice_like_vietnamese_fields() -> None:
     )
 
     assert fields["supplier_name"] == "CÔNG TY TNHH MINH AN"
-    assert fields["tax_code"] == "0312345678"
+    assert fields["tax_code"] == "0000000000"
     assert fields["document_number"] == "HD-2026-001"
     assert fields["document_date"] == "12/06/2026"
     assert fields["subtotal"] == "1000000"
@@ -50,7 +50,7 @@ def test_extracts_receipt_like_fields() -> None:
     fields = fields_from_lines(
         [
             "CUA HANG ANH DAO",
-            "MST: 0109998888",
+            "MST: 1111111111",
             "So chung tu: RC-0099",
             "Ngay: 01/05/2026",
             "Tam tinh: 250000 VND",
@@ -61,7 +61,7 @@ def test_extracts_receipt_like_fields() -> None:
     )
 
     assert fields["supplier_name"] == "CUA HANG ANH DAO"
-    assert fields["tax_code"] == "0109998888"
+    assert fields["tax_code"] == "1111111111"
     assert fields["document_number"] == "RC-0099"
     assert fields["document_date"] == "01/05/2026"
     assert fields["subtotal"] == "250000"
@@ -74,7 +74,7 @@ def test_extracts_delivery_note_like_fields_and_known_weak_cases() -> None:
     fields = fields_from_lines(
         [
             "Người gửi: KHO HANG HOA VIET",
-            "MST: 0311112222",
+            "MST: 2222222222",
             "Số phiếu: PXK-2026-77",
             "Ngày giao: 03/06/2026",
             "Tạm tính: 780.000 VND",
@@ -85,7 +85,7 @@ def test_extracts_delivery_note_like_fields_and_known_weak_cases() -> None:
     )
 
     assert fields["supplier_name"] == "KHO HANG HOA VIET"
-    assert fields["tax_code"] == "0311112222"
+    assert fields["tax_code"] == "2222222222"
     assert fields["document_number"] == "PXK-2026-77"
     assert fields["document_date"] == "03/06/2026"
     assert fields["subtotal"] == "780000"

@@ -28,7 +28,7 @@ def demo_png_bytes() -> bytes:
 def demo_pdf_bytes() -> bytes:
     pdf = fitz.open()
     page = pdf.new_page(width=595, height=842)
-    page.insert_text((72, 72), "CONG TY TNHH MINH AN\nMST: 0312345678")
+    page.insert_text((72, 72), "CONG TY TNHH MINH AN\nMST: 0000000000")
     content = pdf.tobytes()
     pdf.close()
     return content
@@ -84,7 +84,7 @@ def test_upload_ocr_review_approve_export_workflow(tmp_path: Path) -> None:
     fields = client.get(f"/documents/{document_id}/fields")
     assert fields.status_code == 200
     field_by_name = {field["field_name"]: field for field in fields.json()}
-    assert field_by_name["tax_code"]["normalized_value"] == "0312345678"
+    assert field_by_name["tax_code"]["normalized_value"] == "0000000000"
     assert field_by_name["total_amount"]["normalized_value"] == "1100000"
 
     supplier_id = field_by_name["supplier_name"]["id"]

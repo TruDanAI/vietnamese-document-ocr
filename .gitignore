@@ -12,7 +12,9 @@ out/
 npm-debug.log*
 
 .env
-.env.local
+.env.*
+!.env.example
+!.env.*.example
 storage/dev/uploads/*
 storage/dev/exports/*
 storage/dev/pages/*
@@ -23,3 +25,7 @@ storage/dev/eval_reports/*
 !storage/dev/eval_reports/.gitkeep
 backend/data/*.db
 backend/data/*.sqlite
+backend/data/*.sqlite3
+backend/data/*.db-*
+backend/data/*.sqlite-*
+backend/data/*.sqlite3-*

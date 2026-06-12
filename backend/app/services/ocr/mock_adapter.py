@@ -34,7 +34,7 @@ def _lines_for_path(page_path: str) -> list[str]:
     if "delivery" in normalized or "giao" in normalized:
         return [
             "Nguoi gui: KHO HANG HOA VIET",
-            "MST: 0311112222",
+            "MST: 2222222222",
             "So phieu: PXK-2026-77",
             "Ngay giao: 03/06/2026",
             "Thanh tien: 780.000 VND",
@@ -45,7 +45,7 @@ def _lines_for_path(page_path: str) -> list[str]:
     if "receipt" in normalized or "bien_lai" in normalized:
         return [
             "CUA HANG ANH DAO",
-            "MST: 0109998888",
+            "MST: 1111111111",
             "So chung tu: RC-0099",
             "Ngay: 01/05/2026",
             "Tam tinh: 250000 VND",
@@ -55,7 +55,7 @@ def _lines_for_path(page_path: str) -> list[str]:
         ]
     return [
             "Don vi ban: CONG TY TNHH MINH AN",
-            "MST: 0312345678",
+            "MST: 0000000000",
             "So hoa don: HD-2026-001",
             "Ngay: 12/06/2026",
             "Cong tien hang: 1.000.000 VND",
