@@ -12,6 +12,7 @@ class OcrBlockResult:
 
 class OcrAdapter:
     engine_name = "base"
+    model_name = "unknown"
 
     def run_page(self, page_path: str, page_number: int) -> list[OcrBlockResult]:
         raise NotImplementedError
