@@ -8,21 +8,40 @@ samples only.
 This milestone must not claim production OCR accuracy or confirmed PP-OCRv6
 support unless explicit package/API model selection is verified.
 
+## Implementation Result
+
+- Local environment: Python 3.12.0 on Windows 11, CPU-only PaddlePaddle.
+- Installed locally in ignored `backend/.venv`: `paddleocr==3.7.0`,
+  `paddlex==3.7.1`, and `paddlepaddle==3.3.0`.
+- Generic PaddleOCR smoke ran on `data/samples/smoke-demo-invoice.png` and
+  `data/samples/smoke-demo-invoice.pdf`; both returned 20 OCR blocks with text
+  and polygons.
+- Explicit PP-OCRv6 mode was verified through
+  `PaddleOCR(lang="vi", ocr_version="PP-OCRv6")`.
+- Runtime metadata for explicit mode:
+  `engine_name=ppocrv6`,
+  `model_name=PP-OCRv6_medium_det+PP-OCRv6_medium_rec`.
+- Evaluation smoke results on the existing 9-sample synthetic dataset:
+  generic PaddleOCR passed 2/9 documents with 41.98% exact and normalized
+  accuracy; explicit PP-OCRv6 passed 2/9 documents with the same metrics.
+- The first Windows CPU run failed with a PaddlePaddle 3.3.0 oneDNN/PIR
+  inference error. The adapter now sets
+  `PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT=0` before importing PaddleOCR unless the
+  caller already set a value.
+
 ## Requirement Check
 
 - Affected workflow: developers can run the default mock path as before, then
   optionally run a real PaddleOCR smoke check on fake Vietnamese business
   documents when local dependencies are installed.
-- Affected layers: backend OCR/evaluation workflow, docs, and future synthetic
-  sample data only.
-- Out of scope: PaddleOCR installation in this planning PR, dependency changes,
-  generated samples, README edits, backend/frontend code changes, real
-  documents, customer data, CCCD/CMND, auth, RAG, SaaS features, production
-  accuracy claims, model weights, and generated local artifacts.
-- Proof of success: a later implementation PR shows mock still passes, PaddleOCR
-  runs on at least one synthetic image/PDF page, OCR blocks include text and
-  bboxes where available, and any extraction imperfections or PP-OCRv6 limits
-  are documented honestly.
+- Affected layers: backend OCR/evaluation workflow, docs, and synthetic sample
+  data only.
+- Out of scope: dependency lock changes, frontend changes, real documents,
+  customer data, CCCD/CMND, auth, RAG, SaaS features, production accuracy
+  claims, model weights, and generated local artifacts.
+- Proof of success: mock still passes, PaddleOCR runs on synthetic image/PDF
+  pages, OCR blocks include text and bboxes where available, and any extraction
+  imperfections or runtime limits are documented honestly.
 
 ## Environment Check Commands
 
@@ -63,9 +82,8 @@ GPU-capable.
 - Do not use personal data.
 - Use fake names like `CÔNG TY TNHH DEMO OCR`.
 - Use fake tax code `MST 0000000000`.
-- Include at least one image and one PDF page in the future implementation.
-- Future synthetic smoke samples should live under `data/samples/` with clear
-  smoke/demo names.
+- Included `data/samples/smoke-demo-invoice.png` and
+  `data/samples/smoke-demo-invoice.pdf`.
 
 ## Verification Plan
 
@@ -78,12 +96,11 @@ python -m app.evaluation.run --engine mock
 ```
 
 Run Paddle smoke verification only when PaddleOCR dependencies are installed.
-The Paddle path should use the existing generic PaddleOCR adapter unless a
-documented package/API path requires a narrow follow-up change.
+The generic Paddle path uses `PaddleOCR(lang="vi")`.
 
-Enable PP-OCRv6 only if explicit PP-OCRv6 selection is verified through the
-installed package/API. If explicit selection cannot be verified, document
-PP-OCRv6 honestly as not verified and keep `OCR_ENGINE=ppocrv6` unsupported.
+PP-OCRv6 is enabled only through the verified explicit
+`PaddleOCR(lang="vi", ocr_version="PP-OCRv6")` API. It remains experimental and
+is not the default engine.
 
 ## Success Criteria
 
@@ -110,9 +127,9 @@ Milestone 6 implementation will be considered successful when:
 - Committed model weights.
 - Generated DBs/uploads/page images/cache files.
 
-## Follow-up Implementation Notes
+## Follow-up Notes
 
-Implementation should happen in a later PR after this planning PR is merged.
-That later PR should keep changes narrow, avoid real documents or generated
-artifacts, and update README only after the actual PaddleOCR smoke result is
-verified.
+- Do not commit `backend/.venv`, model caches, uploads, page renders, databases,
+  or evaluation reports.
+- Treat real PaddleOCR/PP-OCRv6 results as smoke output only until a larger
+  synthetic dataset and repeatable accuracy baseline exist.

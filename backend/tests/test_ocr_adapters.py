@@ -1,4 +1,6 @@
 import builtins
+import sys
+from types import ModuleType
 
 import pytest
 
@@ -32,6 +34,74 @@ def test_paddle_import_failure_has_clear_error(monkeypatch: pytest.MonkeyPatch) 
         PaddleOcrAdapter()
 
 
-def test_ppocrv6_engine_is_not_faked_without_verified_api_support() -> None:
-    with pytest.raises(ValueError, match="PP-OCRv6 is not enabled"):
+def test_ppocrv6_engine_requires_explicit_ocr_version_api(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_module = ModuleType("paddleocr")
+
+    class FakePaddleOCR:
+        def __init__(self, *, lang=None):
+            self.lang = lang
+
+        def ocr(self, page_path):
+            return []
+
+    fake_module.PaddleOCR = FakePaddleOCR
+    monkeypatch.setitem(sys.modules, "paddleocr", fake_module)
+
+    with pytest.raises(RuntimeError, match="does not expose explicit ocr_version"):
         build_ocr_adapter("ppocrv6")
+
+
+def test_paddle_adapter_returns_blocks_from_paddle_result(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_module = ModuleType("paddleocr")
+
+    class FakePaddleOCR:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        def ocr(self, page_path):
+            assert page_path == "page.png"
+            return [
+                {
+                    "rec_texts": ["CÔNG TY TNHH DEMO OCR"],
+                    "rec_scores": [0.98],
+                    "rec_polys": [
+                        [[10, 20], [210, 20], [210, 50], [10, 50]],
+                    ],
+                }
+            ]
+
+    fake_module.PaddleOCR = FakePaddleOCR
+    monkeypatch.setitem(sys.modules, "paddleocr", fake_module)
+
+    adapter = build_ocr_adapter("paddle")
+    blocks = adapter.run_page("page.png", 1)
+
+    assert adapter.engine_name == "paddle"
+    assert adapter.model_name == "paddleocr_lang_vi_auto"
+    assert len(blocks) == 1
+    assert blocks[0].text == "CÔNG TY TNHH DEMO OCR"
+    assert blocks[0].confidence == 0.98
+    assert blocks[0].bbox["x"] == 10
+    assert blocks[0].bbox["width"] == 200
+    assert blocks[0].bbox["polygon"] == [[10.0, 20.0], [210.0, 20.0], [210.0, 50.0], [10.0, 50.0]]
+
+
+def test_ppocrv6_adapter_uses_explicit_verified_ocr_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_module = ModuleType("paddleocr")
+    calls = []
+
+    class FakePaddleOCR:
+        def __init__(self, *, lang=None, ocr_version=None):
+            calls.append({"lang": lang, "ocr_version": ocr_version})
+
+        def ocr(self, page_path):
+            return []
+
+    fake_module.PaddleOCR = FakePaddleOCR
+    monkeypatch.setitem(sys.modules, "paddleocr", fake_module)
+
+    adapter = build_ocr_adapter("ppocrv6")
+
+    assert adapter.engine_name == "ppocrv6"
+    assert adapter.model_name == "PP-OCRv6_medium_det+PP-OCRv6_medium_rec"
+    assert calls == [{"lang": "vi", "ocr_version": "PP-OCRv6"}]
