@@ -5,7 +5,14 @@ from pathlib import Path
 from app.evaluation.metrics import summarize_field_metrics
 
 
-def build_report(*, engine: str, model_name: str = "unknown", document_results: list[dict]) -> dict:
+def build_report(
+    *,
+    engine: str,
+    model_name: str = "unknown",
+    document_results: list[dict],
+    skipped_samples: list[dict] | None = None,
+) -> dict:
+    skipped_samples = skipped_samples or []
     total_documents = len(document_results)
     passed_documents = sum(1 for item in document_results if item["passed"])
     total_fields = sum(len(item["fields"]) for item in document_results)
@@ -20,6 +27,8 @@ def build_report(*, engine: str, model_name: str = "unknown", document_results: 
         "model_name": model_name,
         "summary": {
             "total_documents": total_documents,
+            "evaluated_documents": total_documents,
+            "skipped_documents": len(skipped_samples),
             "passed_documents": passed_documents,
             "failed_documents": total_documents - passed_documents,
             "document_pass_rate": _ratio(passed_documents, total_documents),
@@ -30,6 +39,7 @@ def build_report(*, engine: str, model_name: str = "unknown", document_results: 
             "wrong_field_count": wrong_fields,
         },
         "field_metrics": summarize_field_metrics(document_results),
+        "skipped_documents": skipped_samples,
         "documents": document_results,
     }
 
@@ -53,6 +63,7 @@ def build_markdown_summary(report: dict) -> str:
         f"- Generated At: `{report['generated_at']}`",
         f"- OCR Model: `{report.get('model_name', 'unknown')}`",
         f"- Documents: {summary['passed_documents']}/{summary['total_documents']} passed",
+        f"- Skipped Documents: {summary.get('skipped_documents', 0)}",
         f"- Exact Match Accuracy: {summary['exact_match_accuracy']:.2%}",
         f"- Normalized Match Accuracy: {summary['normalized_match_accuracy']:.2%}",
         f"- Missing Fields: {summary['missing_field_count']}",
@@ -80,6 +91,20 @@ def build_markdown_summary(report: dict) -> str:
         status = "PASS" if document["passed"] else "FAIL"
         lines.append(f"- `{document['sample_id']}` ({document['document_type']}): {status}")
     lines.append("")
+
+    skipped_documents = report.get("skipped_documents", [])
+    if skipped_documents:
+        lines.extend(["## Skipped Documents", ""])
+        for document in skipped_documents:
+            lines.append(
+                "- `{sample_id}` ({document_type}): {eval_mode} - {reason}".format(
+                    sample_id=document.get("sample_id", "unknown"),
+                    document_type=document.get("document_type", "unknown"),
+                    eval_mode=document.get("eval_mode", "unknown"),
+                    reason=document.get("reason", "skipped"),
+                )
+            )
+        lines.append("")
     return "\n".join(lines)
 
 

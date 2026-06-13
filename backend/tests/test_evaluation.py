@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from app.evaluation.dataset import EVAL_MODE_MOCK_ONLY, EVAL_MODE_REAL_OCR, load_eval_samples
+from app.evaluation.diagnostics import build_diagnostics_markdown, write_diagnostics_report
 from app.evaluation.metrics import compare_fields
 from app.evaluation.normalize import (
     normalize_currency,
@@ -8,9 +10,8 @@ from app.evaluation.normalize import (
     normalize_tax_code,
     normalize_text,
 )
-from app.evaluation.diagnostics import write_diagnostics_report
-from app.evaluation.report import write_reports
-from app.evaluation.run import REPO_ROOT, run_evaluation
+from app.evaluation.report import build_markdown_summary, build_report, write_reports
+from app.evaluation.run import REPO_ROOT, run_evaluation, select_eval_samples
 from app.services.extraction.rules import ExtractedFieldResult
 
 
@@ -66,11 +67,54 @@ def test_mock_evaluation_generates_perfect_synthetic_report(tmp_path: Path) -> N
     assert report["engine"] == "mock"
     assert report["model_name"] == "mock_synthetic"
     assert report["summary"]["total_documents"] == 9
+    assert report["summary"]["skipped_documents"] == 0
     assert report["summary"]["passed_documents"] == 9
     assert report["summary"]["exact_match_accuracy"] == 1.0
     assert report["summary"]["normalized_match_accuracy"] == 1.0
     assert report["field_metrics"]["tax_code"]["missing_count"] == 0
     assert all(document["model_name"] == "mock_synthetic" for document in report["documents"])
+    assert {document["eval_mode"] for document in report["documents"]} == {EVAL_MODE_MOCK_ONLY, EVAL_MODE_REAL_OCR}
+
+
+def test_eval_sample_metadata_separates_mock_only_and_real_ocr_fixtures() -> None:
+    samples = load_eval_samples(REPO_ROOT / "data" / "eval")
+    by_id = {sample.sample_id: sample for sample in samples}
+
+    assert by_id["invoice-synthetic"].eval_mode == EVAL_MODE_REAL_OCR
+    assert by_id["delivery-note-synthetic"].eval_mode == EVAL_MODE_REAL_OCR
+    assert by_id["invoice-alt-labels"].eval_mode == EVAL_MODE_MOCK_ONLY
+    assert by_id["invoice-split-values"].eval_mode == EVAL_MODE_MOCK_ONLY
+    assert by_id["receipt-synthetic"].eval_mode == EVAL_MODE_MOCK_ONLY
+
+
+def test_mock_engine_includes_mock_only_fixtures_by_default() -> None:
+    samples = load_eval_samples(REPO_ROOT / "data" / "eval")
+
+    selected, skipped = select_eval_samples(samples, engine="mock")
+
+    assert len(selected) == 9
+    assert skipped == []
+    assert any(sample.eval_mode == EVAL_MODE_MOCK_ONLY for sample in selected)
+
+
+def test_real_ocr_engines_skip_mock_only_fixtures_by_default() -> None:
+    samples = load_eval_samples(REPO_ROOT / "data" / "eval")
+
+    for engine in ("paddle", "ppocrv6"):
+        selected, skipped = select_eval_samples(samples, engine=engine)
+
+        assert [sample.sample_id for sample in selected] == ["delivery-note-synthetic", "invoice-synthetic"]
+        assert len(skipped) == 7
+        assert all(item["eval_mode"] == EVAL_MODE_MOCK_ONLY for item in skipped)
+
+
+def test_real_ocr_engines_can_explicitly_include_mock_only_fixtures() -> None:
+    samples = load_eval_samples(REPO_ROOT / "data" / "eval")
+
+    selected, skipped = select_eval_samples(samples, engine="paddle", include_mock_only=True)
+
+    assert len(selected) == 9
+    assert skipped == []
 
 
 def test_evaluation_report_writes_json_and_markdown(tmp_path: Path) -> None:
@@ -87,12 +131,36 @@ def test_evaluation_report_writes_json_and_markdown(tmp_path: Path) -> None:
     markdown = markdown_path.read_text(encoding="utf-8")
     assert "Evaluation Report - mock" in markdown
     assert "OCR Model: `mock_synthetic`" in markdown
+    assert "Skipped Documents: 0" in markdown
+
+
+def test_report_summary_includes_skipped_sample_count() -> None:
+    samples = load_eval_samples(REPO_ROOT / "data" / "eval")
+    _, skipped = select_eval_samples(samples, engine="paddle")
+
+    report = build_report(engine="paddle", model_name="fake_paddle", document_results=[], skipped_samples=skipped)
+    markdown = build_markdown_summary(report)
+
+    assert report["summary"]["total_documents"] == 0
+    assert report["summary"]["skipped_documents"] == 7
+    assert report["skipped_documents"][0]["reason"] == "mock_only fixture skipped for real OCR engine"
+    assert "Skipped Documents: 7" in markdown
+    assert "Skipped Documents" in markdown
+    assert "`invoice-alt-labels`" in markdown
 
 
 def test_diagnostics_report_writes_failed_sample_details(tmp_path: Path) -> None:
     report = {
         "engine": "fake",
         "model_name": "fake_model",
+        "skipped_documents": [
+            {
+                "sample_id": "invoice-alt-labels",
+                "document_type": "invoice",
+                "eval_mode": "mock_only",
+                "reason": "mock_only fixture skipped for real OCR engine",
+            }
+        ],
         "documents": [
             {
                 "sample_id": "invoice-failed",
@@ -157,6 +225,8 @@ def test_diagnostics_report_writes_failed_sample_details(tmp_path: Path) -> None
     assert "Missing Fields: 1" in markdown
     assert "Wrong Fields: 1" in markdown
     assert "Likely Failure Category: extraction rule miss" in markdown
+    assert "Skipped Mock-Only Samples" in markdown
+    assert "`invoice-alt-labels`" in markdown
 
 
 def test_diagnostics_report_can_run_for_mock_engine(tmp_path: Path) -> None:
@@ -173,4 +243,12 @@ def test_diagnostics_report_can_run_for_mock_engine(tmp_path: Path) -> None:
     markdown = diagnostics_path.read_text(encoding="utf-8")
     assert "Evaluation Diagnostics - mock" in markdown
     assert "model_name: `mock_synthetic`" in markdown
+    assert "skipped_samples: 0" in markdown
     assert "No failed samples." in markdown
+
+
+def test_generated_eval_reports_are_ignored_by_git() -> None:
+    gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
+
+    assert "storage/dev/eval_reports/*" in gitignore
+    assert "!storage/dev/eval_reports/.gitkeep" in gitignore

@@ -21,6 +21,7 @@ def build_diagnostics_markdown(report: dict) -> str:
     engine_name = report.get("engine", "unknown")
     model_name = report.get("model_name", "unknown")
     failed_documents = [document for document in report.get("documents", []) if not document.get("passed")]
+    skipped_documents = report.get("skipped_documents", [])
 
     lines = [
         f"# Evaluation Diagnostics - {engine_name}",
@@ -29,8 +30,12 @@ def build_diagnostics_markdown(report: dict) -> str:
         f"- engine_name: `{engine_name}`",
         f"- model_name: `{model_name}`",
         f"- failed_samples: {len(failed_documents)}",
+        f"- skipped_samples: {len(skipped_documents)}",
         "",
     ]
+
+    if skipped_documents:
+        lines.extend(_build_skipped_section(skipped_documents))
 
     if not failed_documents:
         lines.append("No failed samples.")
@@ -41,6 +46,25 @@ def build_diagnostics_markdown(report: dict) -> str:
         lines.extend(_build_document_section(document))
 
     return "\n".join(lines)
+
+
+def _build_skipped_section(skipped_documents: list[dict]) -> list[str]:
+    lines = [
+        "## Skipped Mock-Only Samples",
+        "",
+        "These fixtures were skipped because their expected JSON is for deterministic mock OCR, not visible real OCR content.",
+        "",
+    ]
+    for document in skipped_documents:
+        lines.append(
+            "- `{sample_id}` ({document_type}): {reason}".format(
+                sample_id=document.get("sample_id", "unknown"),
+                document_type=document.get("document_type", "unknown"),
+                reason=document.get("reason", "skipped"),
+            )
+        )
+    lines.append("")
+    return lines
 
 
 def _build_document_section(document: dict) -> list[str]:
