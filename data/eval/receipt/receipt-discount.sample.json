@@ -1,6 +1,7 @@
 {
   "sample_id": "receipt-discount",
   "document_type": "receipt",
+  "eval_mode": "mock_only",
   "source_file": "../../samples/receipt-synthetic.png",
   "expected_file": "../expected/receipt-discount.expected.json"
 }

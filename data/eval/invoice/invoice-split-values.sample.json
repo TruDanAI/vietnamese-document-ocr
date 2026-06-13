@@ -1,6 +1,7 @@
 {
   "sample_id": "invoice-split-values",
   "document_type": "invoice",
+  "eval_mode": "mock_only",
   "source_file": "../../samples/invoice-synthetic.png",
   "expected_file": "../expected/invoice-split-values.expected.json"
 }

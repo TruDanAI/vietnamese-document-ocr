@@ -291,8 +291,31 @@ data/eval/
 ```
 
 The current dataset has 9 synthetic samples: 3 invoices, 3 receipts, and 3
-delivery notes. The added Milestone 4 variants reuse safe synthetic image
-placeholders while mock OCR emits deterministic variant text by `sample_id`.
+delivery notes. Some variants reuse safe synthetic image placeholders while mock
+OCR emits deterministic variant text by `sample_id`.
+
+Each sample declares an `eval_mode`:
+
+- `mock_only`: extractor regression fixture for deterministic mock OCR. Real
+  OCR engines skip these by default because the expected JSON may not match the
+  visible image/PDF text.
+- `real_ocr`: visible image/PDF content matches expected JSON. PaddleOCR and
+  PP-OCRv6 use only these fixtures by default.
+
+Current real OCR-compatible fixtures:
+
+- `invoice-synthetic`
+- `delivery-note-synthetic`
+
+Current mock-only fixtures:
+
+- `invoice-alt-labels`
+- `invoice-split-values`
+- `receipt-discount`
+- `receipt-marketplace`
+- `receipt-synthetic`
+- `delivery-note-split-sender`
+- `delivery-note-warehouse`
 
 Each `*.sample.json` declares:
 
@@ -300,6 +323,7 @@ Each `*.sample.json` declares:
 {
   "sample_id": "invoice-synthetic",
   "document_type": "invoice",
+  "eval_mode": "real_ocr",
   "source_file": "../../samples/invoice-synthetic.png",
   "expected_file": "../expected/invoice-synthetic.expected.json"
 }
@@ -350,6 +374,16 @@ python -m pip install paddlepaddle==3.3.0 -i https://www.paddlepaddle.org.cn/pac
 python -m app.evaluation.run --engine ppocrv6
 ```
 
+Real OCR engines skip `mock_only` fixtures by default and report the skipped
+sample count. To force a diagnostic run across every fixture, use:
+
+```powershell
+python -m app.evaluation.run --engine paddle --include-mock-only
+```
+
+Use that flag only when you intentionally want to compare real OCR output
+against mock-only expectations.
+
 PP-OCRv6 mode is verified only for the local package/API combination documented
 above. Do not record it as an OCR baseline unless the command actually runs in
 your environment.
@@ -386,8 +420,9 @@ storage/dev/eval_reports/<timestamp>-<engine>-diagnostics.md
 Generated evaluation and diagnostic reports are local artifacts ignored by git
 and should not be committed. Diagnostics show failed samples, OCR text previews,
 expected vs extracted fields, and simple failure categories. They explain why a
-run failed but do not improve accuracy by themselves. Real PaddleOCR and
-PP-OCRv6 results remain weak until later extraction and preprocessing
+run failed but do not improve accuracy by themselves. Diagnostics also list
+skipped mock-only fixtures for real OCR engines. Real PaddleOCR and PP-OCRv6
+results remain smoke/evaluation aids until later extraction and preprocessing
 milestones.
 
 The frontend also has a small report list at:
@@ -427,6 +462,8 @@ not match inside `Subtotal`.
 
 This is an extractor regression baseline, not a real OCR benchmark. PaddleOCR
 and PP-OCRv6 smoke results should be reported separately from the mock baseline.
+Mock 9/9 and real OCR document counts should not be compared directly unless
+the same fixture set is evaluated in both runs.
 
 ## Demo Workflow
 
@@ -451,7 +488,7 @@ pytest
 Expected current result:
 
 ```text
-17 passed
+33 passed
 ```
 
 Frontend verification:
