@@ -14,16 +14,19 @@ Each sample declares an `eval_mode`:
 - `real_ocr`: the visible image/PDF content matches the expected JSON. PaddleOCR
   and PP-OCRv6 evaluate only these fixtures by default.
 
-The current dataset has 9 synthetic samples:
+The current dataset has 12 synthetic samples:
 
-- 3 invoice variants
-- 3 receipt variants
-- 3 delivery-note variants
+- 4 invoice variants
+- 4 receipt variants
+- 4 delivery-note variants
 
 Real OCR-compatible fixtures:
 
-- `invoice-synthetic`
+- `delivery-note-demo-diacritics`
 - `delivery-note-synthetic`
+- `invoice-demo-diacritics`
+- `invoice-synthetic`
+- `receipt-demo-diacritics`
 
 Mock-only fixtures:
 
@@ -72,6 +75,8 @@ PP-OCRv6 is an optional smoke/experimental baseline only after the installed
 PaddleOCR package exposes a verified explicit model-selection API. Do not add
 real customer documents, CCCD/CMND samples, or generated OCR artifacts here.
 
-Real OCR reports are smoke/evaluation aids only. Do not compare the mock 9/9
-baseline directly with PaddleOCR or PP-OCRv6 unless all runs use the same
-fixture set.
+Real OCR reports are synthetic-only smoke/evaluation aids. Real OCR engines
+skip the 7 `mock_only` fixtures by default, and those skips are expected. Do not
+compare the mock 12/12 baseline directly with PaddleOCR or PP-OCRv6 unless all
+runs use the same fixture set, and do not treat these synthetic results as a
+production accuracy claim.

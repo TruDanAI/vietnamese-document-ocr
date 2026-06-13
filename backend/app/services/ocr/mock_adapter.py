@@ -32,6 +32,18 @@ class MockOcrAdapter(OcrAdapter):
 
 def _lines_for_path(page_path: str) -> list[str]:
     normalized = page_path.lower()
+    if "invoice-demo-diacritics" in normalized:
+        return [
+            "HÓA ĐƠN BÁN HÀNG",
+            "Don vi ban: CÔNG TY TNHH DEMO OCR",
+            "MST: 0000000000",
+            "So hoa don: DEMO-INV-009",
+            "Ngay: 14/06/2026",
+            "Cong tien hang: 1.250.000 VND",
+            "Thue GTGT: 125.000 VND",
+            "Tong thanh toan: 1.375.000 VND",
+            "Ghi chu: Hoa don demo OCR",
+        ]
     if "invoice-alt-labels" in normalized:
         return [
             "Nha cung cap: CONG TY CO PHAN NAM PHU",
@@ -84,6 +96,18 @@ def _lines_for_path(page_path: str) -> list[str]:
             "Tong cong: 125.000 VND",
             "Ghi chu: Bien lai synthetic khong VAT",
         ]
+    if "receipt-demo-diacritics" in normalized:
+        return [
+            "BIÊN LAI BÁN HÀNG",
+            "CUA HANG DEMO",
+            "MST: 0000000000",
+            "So bien lai: DEMO-REC-009",
+            "Ngay ban: 14/06/2026",
+            "Tam tinh: 320.000 VND",
+            "VAT: 0 VND",
+            "Tong cong: 320.000 VND",
+            "Ghi chu: Bán hàng demo OCR",
+        ]
     if "delivery-note-split-sender" in normalized:
         return [
             "PHIEU GIAO HANG",
@@ -105,6 +129,18 @@ def _lines_for_path(page_path: str) -> list[str]:
             "Thanh tien: 640000 VND",
             "Tong phai tra: 640000 VND",
             "Ghi chu: Hang synthetic noi bo",
+        ]
+    if "delivery-note-demo-diacritics" in normalized:
+        return [
+            "PHIẾU GIAO HÀNG",
+            "Nguoi gui: KHO DEMO",
+            "MST: 0000000000",
+            "So phieu giao: DEMO-DN-009",
+            "Ngay giao hang: 14/06/2026",
+            "Tam tinh: 540.000 VND",
+            "VAT: 54.000 VND",
+            "Can thanh toan: 594.000 VND",
+            "Ghi nhan: Giao hàng demo OCR",
         ]
     if "delivery" in normalized or "giao" in normalized:
         return [

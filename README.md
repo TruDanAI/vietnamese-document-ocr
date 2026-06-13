@@ -249,11 +249,14 @@ Safe synthetic samples live under `data/samples/`:
 
 - `invoice-synthetic.png`
 - `invoice-synthetic.pdf`
+- `invoice-demo-diacritics.png`
 - `smoke-demo-invoice.png`
 - `smoke-demo-invoice.pdf`
 - `smoke-demo-invoice-accented.png`
 - `smoke-demo-invoice-accented.pdf`
+- `receipt-demo-diacritics.png`
 - `receipt-synthetic.png`
+- `delivery-note-demo-diacritics.png`
 - `delivery-note-synthetic.png`
 
 These files do not contain real customer, citizen ID, tax, invoice, or private
@@ -267,30 +270,36 @@ Evaluation fixtures live under `data/eval/`:
 ```text
 data/eval/
   invoice/
+    invoice-demo-diacritics.sample.json
     invoice-alt-labels.sample.json
     invoice-split-values.sample.json
     invoice-synthetic.sample.json
   receipt/
+    receipt-demo-diacritics.sample.json
     receipt-discount.sample.json
     receipt-marketplace.sample.json
     receipt-synthetic.sample.json
   delivery_note/
+    delivery-note-demo-diacritics.sample.json
     delivery-note-split-sender.sample.json
     delivery-note-synthetic.sample.json
     delivery-note-warehouse.sample.json
   expected/
+    invoice-demo-diacritics.expected.json
     invoice-alt-labels.expected.json
     invoice-split-values.expected.json
     invoice-synthetic.expected.json
+    receipt-demo-diacritics.expected.json
     receipt-discount.expected.json
     receipt-marketplace.expected.json
     receipt-synthetic.expected.json
+    delivery-note-demo-diacritics.expected.json
     delivery-note-split-sender.expected.json
     delivery-note-synthetic.expected.json
     delivery-note-warehouse.expected.json
 ```
 
-The current dataset has 9 synthetic samples: 3 invoices, 3 receipts, and 3
+The current dataset has 12 synthetic samples: 4 invoices, 4 receipts, and 4
 delivery notes. Some variants reuse safe synthetic image placeholders while mock
 OCR emits deterministic variant text by `sample_id`.
 
@@ -304,8 +313,11 @@ Each sample declares an `eval_mode`:
 
 Current real OCR-compatible fixtures:
 
-- `invoice-synthetic`
+- `delivery-note-demo-diacritics`
 - `delivery-note-synthetic`
+- `invoice-demo-diacritics`
+- `invoice-synthetic`
+- `receipt-demo-diacritics`
 
 Current mock-only fixtures:
 
@@ -374,8 +386,9 @@ python -m pip install paddlepaddle==3.3.0 -i https://www.paddlepaddle.org.cn/pac
 python -m app.evaluation.run --engine ppocrv6
 ```
 
-Real OCR engines skip `mock_only` fixtures by default and report the skipped
-sample count. To force a diagnostic run across every fixture, use:
+Real OCR engines evaluate only the 5 synthetic `real_ocr` fixtures by default,
+skip the remaining 7 `mock_only` fixtures, and report the skipped sample count.
+To force a diagnostic run across every fixture, use:
 
 ```powershell
 python -m app.evaluation.run --engine paddle --include-mock-only
@@ -448,7 +461,7 @@ http://localhost:3000/evaluations
 Current synthetic dataset baseline after Milestone 4 rules:
 
 ```text
-Documents passed: 9/9
+Documents passed: 12/12
 Exact match accuracy: 100.00%
 Normalized match accuracy: 100.00%
 Missing fields: 0
@@ -462,7 +475,7 @@ not match inside `Subtotal`.
 
 This is an extractor regression baseline, not a real OCR benchmark. PaddleOCR
 and PP-OCRv6 smoke results should be reported separately from the mock baseline.
-Mock 9/9 and real OCR document counts should not be compared directly unless
+Mock 12/12 and real OCR document counts should not be compared directly unless
 the same fixture set is evaluated in both runs.
 
 ## Demo Workflow
@@ -488,7 +501,7 @@ pytest
 Expected current result:
 
 ```text
-33 passed
+34 passed
 ```
 
 Frontend verification:
@@ -515,7 +528,7 @@ npm run build
   The adapter now sets that default unless the caller already chose a value.
 - Evaluation results in mock mode measure pipeline correctness, not real OCR
   accuracy, because mock OCR emits deterministic synthetic text.
-- The current 9-sample dataset is too small to claim production accuracy.
+- The current 12-sample dataset is too small to claim production accuracy.
 - Known weak fields for real OCR are likely `supplier_name`, `notes`, and
   monetary fields when table layout, OCR noise, or page geometry separates
   labels and values in ways not represented by the synthetic fixtures.
@@ -525,7 +538,7 @@ npm run build
 
 ## Next Recommended Milestone
 
-- Expand the synthetic evaluation dataset from 9 to 20-30 files across receipts,
+- Expand the synthetic evaluation dataset from 12 to 20-30 files across receipts,
   invoices, delivery notes, and price-list-like documents.
 - Run PaddleOCR mode on those samples and document installation/runtime issues.
 - Add document-type-specific extraction templates.
