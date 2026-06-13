@@ -211,16 +211,32 @@ Evaluation fixtures live under `data/eval/`:
 ```text
 data/eval/
   invoice/
+    invoice-alt-labels.sample.json
+    invoice-split-values.sample.json
     invoice-synthetic.sample.json
   receipt/
+    receipt-discount.sample.json
+    receipt-marketplace.sample.json
     receipt-synthetic.sample.json
   delivery_note/
+    delivery-note-split-sender.sample.json
     delivery-note-synthetic.sample.json
+    delivery-note-warehouse.sample.json
   expected/
+    invoice-alt-labels.expected.json
+    invoice-split-values.expected.json
     invoice-synthetic.expected.json
+    receipt-discount.expected.json
+    receipt-marketplace.expected.json
     receipt-synthetic.expected.json
+    delivery-note-split-sender.expected.json
     delivery-note-synthetic.expected.json
+    delivery-note-warehouse.expected.json
 ```
+
+The current dataset has 9 synthetic samples: 3 invoices, 3 receipts, and 3
+delivery notes. The added Milestone 4 variants reuse safe synthetic image
+placeholders while mock OCR emits deterministic variant text by `sample_id`.
 
 Each `*.sample.json` declares:
 
@@ -299,19 +315,20 @@ http://localhost:3000/evaluations
 
 ### Current Mock Baseline
 
-Current synthetic dataset baseline after Milestone 3 rules:
+Current synthetic dataset baseline after Milestone 4 rules:
 
 ```text
-Documents passed: 3/3
+Documents passed: 9/9
 Exact match accuracy: 100.00%
 Normalized match accuracy: 100.00%
 Missing fields: 0
 Wrong fields: 0
 ```
 
-The key rule improvement in this milestone is treating `Thành tiền` /
-`Thanh tien` as a subtotal-like value for delivery-note style documents. Without
-that alias, the delivery-note subtotal fixture would be the first known miss.
+Milestone 4 added synthetic coverage for split labels and values, spaced tax
+codes, alternate receipt and delivery-note number/date labels, extra total
+labels such as `Cần thanh toán` / `Tong phai tra`, and a guard so `Total` does
+not match inside `Subtotal`.
 
 ## Demo Workflow
 
@@ -336,7 +353,7 @@ pytest
 Expected current result:
 
 ```text
-7 passed
+17 passed
 ```
 
 Frontend verification:
@@ -352,23 +369,24 @@ npm run build
 - Mock OCR returns deterministic demo blocks; it does not inspect the uploaded
   file content.
 - Image uploads are normalized to PNG. PDF uploads are rendered to PNG pages.
-- Extraction is rule-based and only handles a narrow set of invoice, receipt,
-  and delivery-note labels.
+- Extraction is rule-based and only handles the synthetic invoice, receipt, and
+  delivery-note labels covered by the current fixtures.
 - XLSX export is intentionally simple and only includes metadata plus extracted
   fields.
 - PaddleOCR mode is optional and may need local dependency troubleshooting.
 - Evaluation results in mock mode measure pipeline correctness, not real OCR
   accuracy, because mock OCR emits deterministic synthetic text.
-- The current dataset is too small to claim production accuracy.
+- The current 9-sample dataset is too small to claim production accuracy.
 - Known weak fields for real OCR are likely `supplier_name`, `notes`, and
-  monetary fields when table layout splits labels and values across lines.
+  monetary fields when table layout, OCR noise, or page geometry separates
+  labels and values in ways not represented by the synthetic fixtures.
 - No authentication or multi-user workflow yet.
 - No PII workflow. Do not upload real CCCD or sensitive customer documents.
 - No RAG, vector database, chatbot, Fanpage, or Zalo integration.
 
 ## Next Recommended Milestone
 
-- Expand the synthetic evaluation dataset to 20-30 files across receipts,
+- Expand the synthetic evaluation dataset from 9 to 20-30 files across receipts,
   invoices, delivery notes, and price-list-like documents.
 - Run PaddleOCR mode on those samples and document installation/runtime issues.
 - Add document-type-specific extraction templates.

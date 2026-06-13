@@ -2,6 +2,12 @@
 
 Safe synthetic OCR/extraction evaluation samples.
 
+The current dataset has 9 synthetic samples:
+
+- 3 invoice variants
+- 3 receipt variants
+- 3 delivery-note variants
+
 Each `*.sample.json` contains:
 
 - `sample_id`
@@ -23,3 +29,5 @@ canonical values for:
 - `notes`
 
 No real CCCD, customer, tax, invoice, or private business data is included.
+The Milestone 4 variants reuse safe synthetic image placeholders in mock mode;
+the mock OCR adapter emits deterministic fake text based on `sample_id`.

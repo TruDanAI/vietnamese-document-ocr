@@ -1,0 +1,6 @@
+{
+  "sample_id": "delivery-note-split-sender",
+  "document_type": "delivery_note",
+  "source_file": "../../samples/delivery-note-synthetic.png",
+  "expected_file": "../expected/delivery-note-split-sender.expected.json"
+}
