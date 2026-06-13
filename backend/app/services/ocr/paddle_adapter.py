@@ -93,34 +93,68 @@ class PpOcrV6Adapter(PaddleOcrAdapter):
 
 
 def _flatten_paddle_result(result):
-    if not result:
-        return []
-    if isinstance(result, list) and result and _looks_like_ocr_item(result[0]):
-        return result
-
     flattened = []
-    pages = result if isinstance(result, list) else [result]
-    for page in pages:
-        page_mapping = _as_mapping(page)
-        if page_mapping is not None:
-            flattened.extend(_items_from_page_mapping(page_mapping))
-        elif isinstance(page, list):
-            flattened.extend(page)
+    _collect_paddle_items(result, flattened)
     return flattened
 
 
+def _collect_paddle_items(value, flattened: list) -> None:
+    page_mapping = _as_mapping(value)
+    if page_mapping is not None:
+        flattened.extend(_items_from_page_mapping(page_mapping))
+        return
+
+    sequence = _as_sequence(value)
+    if sequence is None:
+        return
+    if _looks_like_ocr_item(sequence):
+        flattened.append(sequence)
+        return
+
+    for item in sequence:
+        _collect_paddle_items(item, flattened)
+
+
 def _looks_like_ocr_item(item) -> bool:
-    return isinstance(item, (list, tuple)) and len(item) >= 2 and isinstance(item[1], (list, tuple))
+    item_sequence = _as_sequence(item)
+    if item_sequence is None or len(item_sequence) < 2:
+        return False
+    return _looks_like_polygon(item_sequence[0]) and _looks_like_text_score_pair(item_sequence[1])
+
+
+def _looks_like_polygon(value) -> bool:
+    points = _as_sequence(value)
+    if points is None or len(points) < 2:
+        return False
+    return _looks_like_point(points[0]) and _looks_like_point(points[1])
+
+
+def _looks_like_point(value) -> bool:
+    point = _as_sequence(value)
+    if point is None or len(point) < 2:
+        return False
+    return _coerce_float(point[0]) is not None and _coerce_float(point[1]) is not None
+
+
+def _looks_like_text_score_pair(value) -> bool:
+    text_score = _as_sequence(value)
+    if text_score is None or len(text_score) < 2:
+        return False
+    return isinstance(text_score[0], str) and _coerce_float(text_score[1]) is not None
 
 
 def _parse_paddle_item(item):
-    if not _looks_like_ocr_item(item):
+    item_sequence = _as_sequence(item)
+    if item_sequence is None or not _looks_like_ocr_item(item_sequence):
         return None
-    points = item[0]
-    text_confidence = item[1]
-    if len(text_confidence) < 2:
+    points = item_sequence[0]
+    text_confidence = _as_sequence(item_sequence[1])
+    if text_confidence is None or len(text_confidence) < 2:
         return None
-    return points, text_confidence[0], text_confidence[1]
+    confidence = _coerce_float(text_confidence[1])
+    if confidence is None:
+        return None
+    return points, text_confidence[0], confidence
 
 
 def _as_mapping(value) -> Mapping | None:
@@ -129,16 +163,26 @@ def _as_mapping(value) -> Mapping | None:
     for method_name in ("to_dict", "dict"):
         method = getattr(value, method_name, None)
         if callable(method):
-            mapped = method()
+            try:
+                mapped = method()
+            except (TypeError, ValueError):
+                continue
             if isinstance(mapped, Mapping):
                 return mapped
     return None
 
 
 def _items_from_page_mapping(page: Mapping) -> list:
-    rec_texts = page.get("rec_texts") or []
-    rec_scores = page.get("rec_scores") or []
-    rec_polys = page.get("rec_polys") or page.get("dt_polys") or []
+    result_page = _as_mapping(page.get("res")) if "res" in page else None
+    page = result_page or page
+
+    rec_texts = _as_sequence(page.get("rec_texts")) or []
+    rec_scores = _as_sequence(page.get("rec_scores")) or []
+    rec_polys = _as_sequence(page.get("rec_polys"))
+    if rec_polys is None:
+        rec_polys = _as_sequence(page.get("dt_polys"))
+    rec_polys = rec_polys or []
+
     flattened = []
     for index, text in enumerate(rec_texts):
         score = rec_scores[index] if index < len(rec_scores) else 0.0
@@ -149,13 +193,37 @@ def _items_from_page_mapping(page: Mapping) -> list:
 
 def _normalize_points(points) -> list[list[float]]:
     normalized = []
-    for point in points:
-        if hasattr(point, "tolist"):
-            point = point.tolist()
-        if len(point) < 2:
+    point_sequence = _as_sequence(points)
+    if point_sequence is None:
+        return normalized
+
+    for point in point_sequence:
+        point = _as_sequence(point)
+        if point is None or len(point) < 2:
             continue
-        normalized.append([float(point[0]), float(point[1])])
+        x = _coerce_float(point[0])
+        y = _coerce_float(point[1])
+        if x is None or y is None:
+            continue
+        normalized.append([x, y])
     return normalized
+
+
+def _as_sequence(value) -> list | None:
+    if hasattr(value, "tolist"):
+        value = value.tolist()
+    if isinstance(value, (str, bytes, Mapping)):
+        return None
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    return None
+
+
+def _coerce_float(value) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _detect_model_name(ocr) -> str | None:

@@ -1,4 +1,5 @@
 import builtins
+import os
 import sys
 from types import ModuleType
 
@@ -6,7 +7,7 @@ import pytest
 
 from app.config import Settings
 from app.services.ocr.factory import build_ocr_adapter
-from app.services.ocr.paddle_adapter import PaddleOcrAdapter
+from app.services.ocr.paddle_adapter import PADDLE_MKLDNN_ENV, PaddleOcrAdapter
 
 
 def test_default_ocr_engine_remains_mock() -> None:
@@ -84,6 +85,68 @@ def test_paddle_adapter_returns_blocks_from_paddle_result(monkeypatch: pytest.Mo
     assert blocks[0].bbox["x"] == 10
     assert blocks[0].bbox["width"] == 200
     assert blocks[0].bbox["polygon"] == [[10.0, 20.0], [210.0, 20.0], [210.0, 50.0], [10.0, 50.0]]
+
+
+def test_paddle_adapter_returns_blocks_from_nested_paddle_2_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_module = ModuleType("paddleocr")
+
+    class FakePaddleOCR:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        def ocr(self, page_path):
+            assert page_path == "page.png"
+            return [
+                [
+                    [
+                        [[0, 0], [10, 0], [10, 10], [0, 10]],
+                        ["CÔNG TY TNHH DEMO OCR", 0.98],
+                    ],
+                    [
+                        [[0, 20], [10, 20], [10, 30], [0, 30]],
+                        ["MST 0000000000", 0.97],
+                    ],
+                ]
+            ]
+
+    fake_module.PaddleOCR = FakePaddleOCR
+    monkeypatch.setitem(sys.modules, "paddleocr", fake_module)
+
+    adapter = build_ocr_adapter("paddle")
+    blocks = adapter.run_page("page.png", 1)
+
+    assert len(blocks) == 2
+    assert blocks[0].text == "CÔNG TY TNHH DEMO OCR"
+    assert blocks[1].text == "MST 0000000000"
+    assert blocks[0].bbox["polygon"] == [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]]
+    assert blocks[1].bbox["polygon"] == [[0.0, 20.0], [10.0, 20.0], [10.0, 30.0], [0.0, 30.0]]
+    assert all(
+        isinstance(coordinate, float)
+        for block in blocks
+        for point in block.bbox["polygon"]
+        for coordinate in point
+    )
+
+
+def test_paddle_adapter_preserves_existing_mkldnn_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_module = ModuleType("paddleocr")
+    monkeypatch.setenv(PADDLE_MKLDNN_ENV, "1")
+
+    class FakePaddleOCR:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        def ocr(self, page_path):
+            return []
+
+    fake_module.PaddleOCR = FakePaddleOCR
+    monkeypatch.setitem(sys.modules, "paddleocr", fake_module)
+
+    PaddleOcrAdapter()
+
+    assert os.environ[PADDLE_MKLDNN_ENV] == "1"
 
 
 def test_ppocrv6_adapter_uses_explicit_verified_ocr_version(monkeypatch: pytest.MonkeyPatch) -> None:
