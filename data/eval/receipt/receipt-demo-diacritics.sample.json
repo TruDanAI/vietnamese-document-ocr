@@ -1,0 +1,7 @@
+{
+  "sample_id": "receipt-demo-diacritics",
+  "document_type": "receipt",
+  "eval_mode": "real_ocr",
+  "source_file": "../../samples/receipt-demo-diacritics.png",
+  "expected_file": "../expected/receipt-demo-diacritics.expected.json"
+}

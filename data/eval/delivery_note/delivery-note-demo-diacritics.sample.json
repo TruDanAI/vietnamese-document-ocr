@@ -1,0 +1,7 @@
+{
+  "sample_id": "delivery-note-demo-diacritics",
+  "document_type": "delivery_note",
+  "eval_mode": "real_ocr",
+  "source_file": "../../samples/delivery-note-demo-diacritics.png",
+  "expected_file": "../expected/delivery-note-demo-diacritics.expected.json"
+}

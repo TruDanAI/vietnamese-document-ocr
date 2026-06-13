@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "supplier_name": "KHO DEMO",
+    "tax_code": "0000000000",
+    "document_number": "DEMO-DN-009",
+    "document_date": "14/06/2026",
+    "subtotal": "540000",
+    "vat_amount": "54000",
+    "total_amount": "594000",
+    "currency": "VND",
+    "notes": "Giao hàng demo OCR"
+  }
+}

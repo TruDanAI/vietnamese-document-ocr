@@ -1,0 +1,7 @@
+{
+  "sample_id": "invoice-demo-diacritics",
+  "document_type": "invoice",
+  "eval_mode": "real_ocr",
+  "source_file": "../../samples/invoice-demo-diacritics.png",
+  "expected_file": "../expected/invoice-demo-diacritics.expected.json"
+}
