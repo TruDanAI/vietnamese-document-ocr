@@ -1,6 +1,6 @@
 from app.services.ocr.base import OcrAdapter
 from app.services.ocr.mock_adapter import MockOcrAdapter
-from app.services.ocr.paddle_adapter import PaddleOcrAdapter
+from app.services.ocr.paddle_adapter import PaddleOcrAdapter, PpOcrV6Adapter
 
 
 def build_ocr_adapter(engine_name: str) -> OcrAdapter:
@@ -10,10 +10,5 @@ def build_ocr_adapter(engine_name: str) -> OcrAdapter:
     if normalized in {"paddle", "paddleocr"}:
         return PaddleOcrAdapter()
     if normalized == "ppocrv6":
-        raise ValueError(
-            "PP-OCRv6 is not enabled in this repo because the installed PaddleOCR "
-            "package/API support has not been verified. Use OCR_ENGINE=mock for "
-            "deterministic local development or OCR_ENGINE=paddle for the generic "
-            "PaddleOCR adapter."
-        )
+        return PpOcrV6Adapter()
     raise ValueError(f"Unsupported OCR engine: {engine_name}")

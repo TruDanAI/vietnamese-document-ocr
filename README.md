@@ -33,8 +33,9 @@ Out of scope for this milestone:
 The default OCR engine is `mock`, so the app works without PaddleOCR. A generic
 PaddleOCR adapter exists behind `OCR_ENGINE=paddle` or `OCR_ENGINE=paddleocr`,
 but PaddleOCR setup is optional and not required for the main demo. PP-OCRv6 is
-not enabled as a selectable engine until the installed PaddleOCR Python package
-exposes a verified, explicit model-selection API for it.
+available only as an experimental smoke engine behind `OCR_ENGINE=ppocrv6`
+after the local PaddleOCR/PaddlePaddle install exposes explicit
+`ocr_version="PP-OCRv6"` selection.
 
 ## Repository Layout
 
@@ -80,7 +81,7 @@ Supported engine values:
 | --- | --- | --- | --- |
 | `mock` | Default | `engine_name=mock`, `model_name=mock_synthetic` | Deterministic local development and extractor regression checks. |
 | `paddle` / `paddleocr` | Optional | `engine_name=paddle`, `model_name=paddleocr_lang_vi_auto` unless the package exposes a clearer name | Generic PaddleOCR smoke testing after local installation. |
-| `ppocrv6` | Not enabled | Rejected with a clear error | Planned only after the installed PaddleOCR package/API can explicitly select PP-OCRv6. |
+| `ppocrv6` | Optional experimental | `engine_name=ppocrv6`, `model_name=PP-OCRv6_medium_det+PP-OCRv6_medium_rec` | Explicit PP-OCRv6 smoke testing after local installation. |
 
 Do not treat mock evaluation as OCR accuracy. Mock mode emits deterministic
 synthetic text and measures the extraction/reporting pipeline.
@@ -107,6 +108,7 @@ locally:
 cd backend
 .\.venv\Scripts\Activate.ps1
 python -m pip install paddleocr
+python -m pip install paddlepaddle==3.3.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 $env:OCR_ENGINE="paddle"
 uvicorn app.main:app --reload
 ```
@@ -115,10 +117,16 @@ Notes:
 
 - Official PaddleOCR docs recommend installing the `paddleocr` package from
   PyPI for local inference.
+- The Windows CPU smoke run for this branch used `paddleocr==3.7.0` and the
+  official PaddlePaddle CPU wheel command above, which installed
+  `paddlepaddle==3.3.0`.
 - PaddleOCR may install large dependencies and model files on first use.
 - Windows setups can fail because of PaddlePaddle/PaddleOCR wheel, Python,
   CPU/GPU, or native dependency differences. Keep `OCR_ENGINE=mock` as the
   fallback.
+- The adapter sets `PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT=0` before importing
+  PaddleOCR unless the caller already set it. The first Windows CPU run hit a
+  PaddlePaddle 3.3.0 oneDNN/PIR inference error without that setting.
 - The adapter calls `PaddleOCR(lang="vi")` and lets the installed package choose
   its default Vietnamese OCR models. Evaluation metadata records this as
   `model_name=paddleocr_lang_vi_auto` unless the package exposes a clearer model
@@ -127,21 +135,25 @@ Notes:
 
 ### PP-OCRv6 Status
 
-PP-OCRv6 is tracked as a planned/experimental baseline, not a working default.
-This repo does not currently pass `OCR_MODEL=ppocrv6_small` or similar values to
-PaddleOCR because the installed environment used for this milestone does not
-have the `paddleocr` package available for API inspection. Running
-`OCR_ENGINE=ppocrv6` intentionally fails with a clear message instead of silently
-falling back to generic PaddleOCR.
+PP-OCRv6 is an optional experimental smoke path, not the default engine and not
+an accuracy baseline. The locally verified API is:
 
-When a local PaddleOCR package exposes explicit PP-OCRv6 model selection, add a
-small `OCR_MODEL` configuration value, map it to the documented package API, and
-verify the command before documenting it as supported:
+```python
+PaddleOCR(lang="vi", ocr_version="PP-OCRv6")
+```
+
+In `paddleocr==3.7.0`, that resolves to the medium PP-OCRv6 detection and
+recognition models for Vietnamese/Latin text. Evaluation metadata records:
+
+```text
+engine_name=ppocrv6
+model_name=PP-OCRv6_medium_det+PP-OCRv6_medium_rec
+```
+
+Run it only after installing PaddleOCR and PaddlePaddle locally:
 
 ```powershell
 cd backend
-$env:OCR_ENGINE="ppocrv6"
-$env:OCR_MODEL="ppocrv6_small"
 python -m app.evaluation.run --engine ppocrv6
 ```
 
@@ -237,11 +249,14 @@ Safe synthetic samples live under `data/samples/`:
 
 - `invoice-synthetic.png`
 - `invoice-synthetic.pdf`
+- `smoke-demo-invoice.png`
+- `smoke-demo-invoice.pdf`
 - `receipt-synthetic.png`
 - `delivery-note-synthetic.png`
 
 These files do not contain real customer, citizen ID, tax, invoice, or private
-business data.
+business data. The `smoke-demo-*` files are fake PaddleOCR smoke inputs only;
+they are not evaluation accuracy fixtures.
 
 ## Evaluation Dataset
 
@@ -320,6 +335,7 @@ PaddleOCR mode:
 ```powershell
 cd backend
 python -m pip install paddleocr
+python -m pip install paddlepaddle==3.3.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 python -m app.evaluation.run --engine paddle
 ```
 
@@ -327,12 +343,14 @@ PP-OCRv6 mode:
 
 ```powershell
 cd backend
-$env:OCR_ENGINE="ppocrv6"
+python -m pip install paddleocr
+python -m pip install paddlepaddle==3.3.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 python -m app.evaluation.run --engine ppocrv6
 ```
 
-This is expected to fail until explicit PP-OCRv6 package/API support is added.
-Do not record it as an OCR baseline unless the command actually runs.
+PP-OCRv6 mode is verified only for the local package/API combination documented
+above. Do not record it as an OCR baseline unless the command actually runs in
+your environment.
 
 Reports are written to:
 
@@ -427,7 +445,11 @@ npm run build
   delivery-note labels covered by the current fixtures.
 - XLSX export is intentionally simple and only includes metadata plus extracted
   fields.
-- PaddleOCR mode is optional and may need local dependency troubleshooting.
+- PaddleOCR and PP-OCRv6 modes are optional and may need local dependency
+  troubleshooting.
+- PaddlePaddle 3.3.0 CPU inference hit a oneDNN/PIR error locally until
+  `PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT=0` was set before importing PaddleOCR.
+  The adapter now sets that default unless the caller already chose a value.
 - Evaluation results in mock mode measure pipeline correctness, not real OCR
   accuracy, because mock OCR emits deterministic synthetic text.
 - The current 9-sample dataset is too small to claim production accuracy.

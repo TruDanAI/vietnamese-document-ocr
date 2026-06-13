@@ -22,7 +22,7 @@ def main() -> None:
     parser.add_argument(
         "--engine",
         default="mock",
-        help="OCR engine: mock or paddle. ppocrv6 is planned pending verified PaddleOCR API support.",
+        help="OCR engine: mock, paddle, or experimental ppocrv6.",
     )
     parser.add_argument("--dataset-dir", default=str(DEFAULT_DATASET_DIR))
     parser.add_argument("--storage-dir", default=str(DEFAULT_STORAGE_DIR))
