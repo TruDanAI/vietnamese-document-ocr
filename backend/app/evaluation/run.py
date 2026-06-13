@@ -19,20 +19,28 @@ DEFAULT_STORAGE_DIR = REPO_ROOT / "storage" / "dev"
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run OCR/extraction evaluation.")
-    parser.add_argument("--engine", default="mock", help="OCR engine: mock or paddle")
+    parser.add_argument(
+        "--engine",
+        default="mock",
+        help="OCR engine: mock or paddle. ppocrv6 is planned pending verified PaddleOCR API support.",
+    )
     parser.add_argument("--dataset-dir", default=str(DEFAULT_DATASET_DIR))
     parser.add_argument("--storage-dir", default=str(DEFAULT_STORAGE_DIR))
     args = parser.parse_args()
 
-    report = run_evaluation(
-        engine=args.engine,
-        dataset_dir=Path(args.dataset_dir),
-        storage_dir=Path(args.storage_dir),
-    )
+    try:
+        report = run_evaluation(
+            engine=args.engine,
+            dataset_dir=Path(args.dataset_dir),
+            storage_dir=Path(args.storage_dir),
+        )
+    except (RuntimeError, ValueError) as exc:
+        parser.exit(2, f"error: {exc}\n")
     report_dir = Path(args.storage_dir) / "eval_reports"
     json_path, markdown_path = write_reports(report, report_dir)
     summary = report["summary"]
     print(f"Evaluation complete for engine={args.engine}")
+    print(f"OCR model: {report['model_name']}")
     print(f"Documents passed: {summary['passed_documents']}/{summary['total_documents']}")
     print(f"Exact match accuracy: {summary['exact_match_accuracy']:.2%}")
     print(f"Normalized match accuracy: {summary['normalized_match_accuracy']:.2%}")
@@ -44,11 +52,19 @@ def run_evaluation(*, engine: str, dataset_dir: Path, storage_dir: Path) -> dict
     samples = load_eval_samples(dataset_dir)
     storage = LocalStorageService(storage_dir)
     adapter = build_ocr_adapter(engine)
-    document_results = [_evaluate_sample(sample, storage, adapter.engine_name, adapter) for sample in samples]
-    return build_report(engine=adapter.engine_name, document_results=document_results)
+    document_results = [
+        _evaluate_sample(sample, storage, adapter.engine_name, adapter.model_name, adapter) for sample in samples
+    ]
+    return build_report(engine=adapter.engine_name, model_name=adapter.model_name, document_results=document_results)
 
 
-def _evaluate_sample(sample: EvalSample, storage: LocalStorageService, engine_name: str, adapter) -> dict:
+def _evaluate_sample(
+    sample: EvalSample,
+    storage: LocalStorageService,
+    engine_name: str,
+    model_name: str,
+    adapter,
+) -> dict:
     content_type = mimetypes.guess_type(sample.source_file.name)[0] or "application/octet-stream"
     pages = create_page_images(
         document_id=sample.sample_id,
@@ -85,6 +101,7 @@ def _evaluate_sample(sample: EvalSample, storage: LocalStorageService, engine_na
         "source_file": str(sample.source_file),
         "expected_file": str(sample.expected_file),
         "engine": engine_name,
+        "model_name": model_name,
         "page_count": len(pages),
         "ocr_block_count": len(blocks),
         "average_extraction_confidence": _average([comparison.confidence for comparison in comparisons]),

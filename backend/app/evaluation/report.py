@@ -5,7 +5,7 @@ from pathlib import Path
 from app.evaluation.metrics import summarize_field_metrics
 
 
-def build_report(*, engine: str, document_results: list[dict]) -> dict:
+def build_report(*, engine: str, model_name: str = "unknown", document_results: list[dict]) -> dict:
     total_documents = len(document_results)
     passed_documents = sum(1 for item in document_results if item["passed"])
     total_fields = sum(len(item["fields"]) for item in document_results)
@@ -17,6 +17,7 @@ def build_report(*, engine: str, document_results: list[dict]) -> dict:
     return {
         "generated_at": datetime.now(UTC).isoformat(),
         "engine": engine,
+        "model_name": model_name,
         "summary": {
             "total_documents": total_documents,
             "passed_documents": passed_documents,
@@ -50,6 +51,7 @@ def build_markdown_summary(report: dict) -> str:
         f"# Evaluation Report - {report['engine']}",
         "",
         f"- Generated At: `{report['generated_at']}`",
+        f"- OCR Model: `{report.get('model_name', 'unknown')}`",
         f"- Documents: {summary['passed_documents']}/{summary['total_documents']} passed",
         f"- Exact Match Accuracy: {summary['exact_match_accuracy']:.2%}",
         f"- Normalized Match Accuracy: {summary['normalized_match_accuracy']:.2%}",

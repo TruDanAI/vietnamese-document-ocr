@@ -3,6 +3,7 @@ from app.services.ocr.base import OcrAdapter, OcrBlockResult
 
 class PaddleOcrAdapter(OcrAdapter):
     engine_name = "paddle"
+    model_name = "paddleocr_lang_vi_auto"
 
     def __init__(self) -> None:
         try:
@@ -16,6 +17,7 @@ class PaddleOcrAdapter(OcrAdapter):
             self._ocr = PaddleOCR(lang="vi")
         except Exception as exc:
             raise RuntimeError(f"PaddleOCR failed to initialize: {exc}") from exc
+        self.model_name = _detect_model_name(self._ocr) or self.model_name
 
     def run_page(self, page_path: str, page_number: int) -> list[OcrBlockResult]:
         try:
@@ -83,3 +85,11 @@ def _parse_paddle_item(item):
     if len(text_confidence) < 2:
         return None
     return points, text_confidence[0], text_confidence[1]
+
+
+def _detect_model_name(ocr) -> str | None:
+    for attribute in ("model_name", "ocr_version", "version"):
+        value = getattr(ocr, attribute, None)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None

@@ -2,6 +2,10 @@
 
 Safe synthetic OCR/extraction evaluation samples.
 
+Mock evaluation is an extractor regression check. It verifies that deterministic
+synthetic OCR blocks still produce the expected structured fields; it does not
+measure real OCR accuracy.
+
 The current dataset has 9 synthetic samples:
 
 - 3 invoice variants
@@ -31,3 +35,13 @@ canonical values for:
 No real CCCD, customer, tax, invoice, or private business data is included.
 The Milestone 4 variants reuse safe synthetic image placeholders in mock mode;
 the mock OCR adapter emits deterministic fake text based on `sample_id`.
+
+Evaluation reports include OCR metadata:
+
+- `engine=mock`, `model_name=mock_synthetic` for deterministic mock runs.
+- `engine=paddle`, `model_name=paddleocr_lang_vi_auto` for generic PaddleOCR
+  runs unless the installed package exposes a clearer model name.
+
+PP-OCRv6 is planned as a smoke/experimental baseline only after the installed
+PaddleOCR package exposes a verified explicit model-selection API. Do not add
+real customer documents, CCCD/CMND samples, or generated OCR artifacts here.

@@ -62,11 +62,14 @@ def test_mock_evaluation_generates_perfect_synthetic_report(tmp_path: Path) -> N
         storage_dir=tmp_path / "storage",
     )
 
+    assert report["engine"] == "mock"
+    assert report["model_name"] == "mock_synthetic"
     assert report["summary"]["total_documents"] == 9
     assert report["summary"]["passed_documents"] == 9
     assert report["summary"]["exact_match_accuracy"] == 1.0
     assert report["summary"]["normalized_match_accuracy"] == 1.0
     assert report["field_metrics"]["tax_code"]["missing_count"] == 0
+    assert all(document["model_name"] == "mock_synthetic" for document in report["documents"])
 
 
 def test_evaluation_report_writes_json_and_markdown(tmp_path: Path) -> None:
@@ -80,4 +83,6 @@ def test_evaluation_report_writes_json_and_markdown(tmp_path: Path) -> None:
 
     assert json_path.exists()
     assert markdown_path.exists()
-    assert "Evaluation Report - mock" in markdown_path.read_text(encoding="utf-8")
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert "Evaluation Report - mock" in markdown
+    assert "OCR Model: `mock_synthetic`" in markdown

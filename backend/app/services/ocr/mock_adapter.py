@@ -3,6 +3,7 @@ from app.services.ocr.base import OcrAdapter, OcrBlockResult
 
 class MockOcrAdapter(OcrAdapter):
     engine_name = "mock"
+    model_name = "mock_synthetic"
 
     def run_page(self, page_path: str, page_number: int) -> list[OcrBlockResult]:
         lines = _lines_for_path(page_path)

@@ -30,9 +30,11 @@ Out of scope for this milestone:
 - real CCCD/PII processing
 - production OCR accuracy claims
 
-The default OCR engine is `mock`, so the app works without PaddleOCR. A
+The default OCR engine is `mock`, so the app works without PaddleOCR. A generic
 PaddleOCR adapter exists behind `OCR_ENGINE=paddle` or `OCR_ENGINE=paddleocr`,
-but PaddleOCR setup is optional and not required for the main demo.
+but PaddleOCR setup is optional and not required for the main demo. PP-OCRv6 is
+not enabled as a selectable engine until the installed PaddleOCR Python package
+exposes a verified, explicit model-selection API for it.
 
 ## Repository Layout
 
@@ -70,6 +72,19 @@ STORAGE_DIR=../storage/dev
 OCR_ENGINE=mock
 ```
 
+### OCR Engine Modes
+
+Supported engine values:
+
+| Mode | Status | Metadata | Intended use |
+| --- | --- | --- | --- |
+| `mock` | Default | `engine_name=mock`, `model_name=mock_synthetic` | Deterministic local development and extractor regression checks. |
+| `paddle` / `paddleocr` | Optional | `engine_name=paddle`, `model_name=paddleocr_lang_vi_auto` unless the package exposes a clearer name | Generic PaddleOCR smoke testing after local installation. |
+| `ppocrv6` | Not enabled | Rejected with a clear error | Planned only after the installed PaddleOCR package/API can explicitly select PP-OCRv6. |
+
+Do not treat mock evaluation as OCR accuracy. Mock mode emits deterministic
+synthetic text and measures the extraction/reporting pipeline.
+
 ### Mock OCR Mode
 
 Mock mode is the default and is the expected path for local development:
@@ -81,11 +96,12 @@ uvicorn app.main:app --reload
 
 Mock OCR returns deterministic synthetic blocks. It is useful for testing the
 pipeline, review UI, correction logs, and exports without installing any OCR
-runtime.
+runtime. Evaluation reports record `model_name=mock_synthetic`.
 
 ### PaddleOCR Mode
 
-PaddleOCR is optional. Install it only when you want to test real OCR locally:
+PaddleOCR is optional. Install it only when you want to smoke test real OCR
+locally:
 
 ```powershell
 cd backend
@@ -103,8 +119,31 @@ Notes:
 - Windows setups can fail because of PaddlePaddle/PaddleOCR wheel, Python,
   CPU/GPU, or native dependency differences. Keep `OCR_ENGINE=mock` as the
   fallback.
-- This milestone does not tune PP-OCRv6 model selection. The adapter is a spike
-  path, not a production OCR guarantee.
+- The adapter calls `PaddleOCR(lang="vi")` and lets the installed package choose
+  its default Vietnamese OCR models. Evaluation metadata records this as
+  `model_name=paddleocr_lang_vi_auto` unless the package exposes a clearer model
+  name at runtime.
+- This path is a smoke baseline only, not a production OCR accuracy guarantee.
+
+### PP-OCRv6 Status
+
+PP-OCRv6 is tracked as a planned/experimental baseline, not a working default.
+This repo does not currently pass `OCR_MODEL=ppocrv6_small` or similar values to
+PaddleOCR because the installed environment used for this milestone does not
+have the `paddleocr` package available for API inspection. Running
+`OCR_ENGINE=ppocrv6` intentionally fails with a clear message instead of silently
+falling back to generic PaddleOCR.
+
+When a local PaddleOCR package exposes explicit PP-OCRv6 model selection, add a
+small `OCR_MODEL` configuration value, map it to the documented package API, and
+verify the command before documenting it as supported:
+
+```powershell
+cd backend
+$env:OCR_ENGINE="ppocrv6"
+$env:OCR_MODEL="ppocrv6_small"
+python -m app.evaluation.run --engine ppocrv6
+```
 
 ## Frontend Setup
 
@@ -284,6 +323,17 @@ python -m pip install paddleocr
 python -m app.evaluation.run --engine paddle
 ```
 
+PP-OCRv6 mode:
+
+```powershell
+cd backend
+$env:OCR_ENGINE="ppocrv6"
+python -m app.evaluation.run --engine ppocrv6
+```
+
+This is expected to fail until explicit PP-OCRv6 package/API support is added.
+Do not record it as an OCR baseline unless the command actually runs.
+
 Reports are written to:
 
 ```text
@@ -294,6 +344,7 @@ The runner writes:
 
 - JSON report: machine-readable full field comparisons.
 - Markdown report: quick human-readable summary.
+- OCR metadata: `engine` and `model_name` at the report and document level.
 
 The frontend also has a small report list at:
 
@@ -329,6 +380,9 @@ Milestone 4 added synthetic coverage for split labels and values, spaced tax
 codes, alternate receipt and delivery-note number/date labels, extra total
 labels such as `Cần thanh toán` / `Tong phai tra`, and a guard so `Total` does
 not match inside `Subtotal`.
+
+This is an extractor regression baseline, not a real OCR benchmark. PaddleOCR
+and PP-OCRv6 smoke results should be reported separately from the mock baseline.
 
 ## Demo Workflow
 
