@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "supplier_name": "CONG TY TNHH SAO BAC",
+    "tax_code": "0300000001",
+    "document_number": "INV-2026-014",
+    "document_date": "05/06/2026",
+    "subtotal": "2500000",
+    "vat_amount": "250000",
+    "total_amount": "2750000",
+    "currency": "VND",
+    "notes": "Hoa don synthetic chia dong"
+  }
+}

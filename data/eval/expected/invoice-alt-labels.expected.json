@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "supplier_name": "CONG TY CO PHAN NAM PHU",
+    "tax_code": "0312345678",
+    "document_number": "INV/2026/88",
+    "document_date": "15-06-2026",
+    "subtotal": "3300000",
+    "vat_amount": "330000",
+    "total_amount": "3630000",
+    "currency": "VND",
+    "notes": "Alternate invoice labels synthetic"
+  }
+}

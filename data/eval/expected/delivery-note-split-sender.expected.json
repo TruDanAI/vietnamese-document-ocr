@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "supplier_name": "KHO TRUNG TAM FAKE",
+    "tax_code": "0200000004",
+    "document_number": "PGH-2026-21",
+    "document_date": "08/06/2026",
+    "subtotal": "980000",
+    "vat_amount": "98000",
+    "total_amount": "1078000",
+    "currency": "VND",
+    "notes": "Synthetic delivery note"
+  }
+}

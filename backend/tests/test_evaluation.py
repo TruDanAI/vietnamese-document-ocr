@@ -62,8 +62,8 @@ def test_mock_evaluation_generates_perfect_synthetic_report(tmp_path: Path) -> N
         storage_dir=tmp_path / "storage",
     )
 
-    assert report["summary"]["total_documents"] == 3
-    assert report["summary"]["passed_documents"] == 3
+    assert report["summary"]["total_documents"] == 9
+    assert report["summary"]["passed_documents"] == 9
     assert report["summary"]["exact_match_accuracy"] == 1.0
     assert report["summary"]["normalized_match_accuracy"] == 1.0
     assert report["field_metrics"]["tax_code"]["missing_count"] == 0

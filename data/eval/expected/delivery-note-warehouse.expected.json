@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "supplier_name": "KHO MIEN NAM SYNTHETIC",
+    "tax_code": null,
+    "document_number": "PX-2026-31",
+    "document_date": "09/06/2026",
+    "subtotal": "640000",
+    "vat_amount": null,
+    "total_amount": "640000",
+    "currency": "VND",
+    "notes": "Hang synthetic noi bo"
+  }
+}

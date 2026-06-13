@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "supplier_name": "CUA HANG MINH CHAU",
+    "tax_code": "0100000003",
+    "document_number": "RC-2026-15",
+    "document_date": "07-06-2026",
+    "subtotal": "500000",
+    "vat_amount": "0",
+    "total_amount": "450000",
+    "currency": "VND",
+    "notes": "Khuyen mai synthetic"
+  }
+}

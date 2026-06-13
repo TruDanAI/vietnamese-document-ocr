@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "supplier_name": "CUA HANG HOA SEN",
+    "tax_code": "0100000002",
+    "document_number": "BL-2026-02",
+    "document_date": "06/06/2026",
+    "subtotal": "125000",
+    "vat_amount": "0",
+    "total_amount": "125000",
+    "currency": "VND",
+    "notes": "Bien lai synthetic khong VAT"
+  }
+}

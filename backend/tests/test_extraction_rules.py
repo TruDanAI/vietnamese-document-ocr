@@ -92,3 +92,111 @@ def test_extracts_delivery_note_like_fields_and_known_weak_cases() -> None:
     assert fields["vat_amount"] == "78000"
     assert fields["total_amount"] == "858000"
     assert fields["notes"] == "Giao hàng trước 17h"
+
+
+def test_extracts_split_invoice_label_values() -> None:
+    fields = fields_from_lines(
+        [
+            "Don vi ban:",
+            "CONG TY TNHH SAO BAC",
+            "MST:",
+            "0300000001",
+            "So hoa don:",
+            "INV-2026-014",
+            "Ngay lap:",
+            "05/06/2026",
+            "Tong thanh toan:",
+            "2,750,000 VND",
+            "Ghi chu:",
+            "Hoa don synthetic chia dong",
+        ]
+    )
+
+    assert fields["supplier_name"] == "CONG TY TNHH SAO BAC"
+    assert fields["tax_code"] == "0300000001"
+    assert fields["document_number"] == "INV-2026-014"
+    assert fields["document_date"] == "05/06/2026"
+    assert fields["total_amount"] == "2750000"
+    assert fields["notes"] == "Hoa don synthetic chia dong"
+
+
+def test_extracts_receipt_variant_labels_and_spaced_tax_code() -> None:
+    fields = fields_from_lines(
+        [
+            "CUA HANG HOA SEN",
+            "Ma so thue: 010 000 0003",
+            "So bien lai: BL-2026-02",
+            "Ngay ban: 06/06/2026",
+            "Tong tien hang: 125.000 VND",
+            "Tong cong: 125.000 VND",
+        ]
+    )
+
+    assert fields["tax_code"] == "0100000003"
+    assert fields["document_number"] == "BL-2026-02"
+    assert fields["document_date"] == "06/06/2026"
+    assert fields["subtotal"] == "125000"
+    assert fields["total_amount"] == "125000"
+
+
+def test_extracts_delivery_variant_labels_without_total_substring_collision() -> None:
+    fields = fields_from_lines(
+        [
+            "PHIEU GIAO HANG",
+            "Nguoi gui:",
+            "KHO TRUNG TAM FAKE",
+            "So phieu giao: PGH-2026-21",
+            "Ngay giao hang: 08/06/2026",
+            "Subtotal 980.000 VND",
+            "Total 1.078.000 VND",
+        ]
+    )
+
+    assert fields["supplier_name"] == "KHO TRUNG TAM FAKE"
+    assert fields["document_number"] == "PGH-2026-21"
+    assert fields["document_date"] == "08/06/2026"
+    assert fields["subtotal"] == "980000"
+    assert fields["total_amount"] == "1078000"
+
+
+def test_rejects_heavily_spaced_partial_tax_code() -> None:
+    fields = fields_from_lines(
+        [
+            "CUA HANG TEST",
+            "Ma so thue: 010 000 0",
+            "So chung tu: RC-TEST-01",
+            "Ngay: 10/06/2026",
+        ]
+    )
+
+    assert fields["tax_code"] is None
+
+
+def test_subtotal_without_true_total_does_not_extract_total_amount() -> None:
+    fields = fields_from_lines(
+        [
+            "Don vi ban: CONG TY TEST",
+            "MST: 0100000009",
+            "So hoa don: INV-TEST-01",
+            "Ngay: 10/06/2026",
+            "Subtotal 980.000 VND",
+        ]
+    )
+
+    assert fields["subtotal"] == "980000"
+    assert fields["total_amount"] is None
+
+
+def test_prefers_final_payable_total_when_multiple_total_like_amounts_exist() -> None:
+    fields = fields_from_lines(
+        [
+            "Don vi ban: CONG TY TEST",
+            "MST: 0100000010",
+            "So hoa don: INV-TEST-02",
+            "Ngay: 10/06/2026",
+            "Tong cong: 1.000.000 VND",
+            "Can thanh toan: 900.000 VND",
+        ]
+    )
+
+    assert fields["total_amount"] == "900000"
