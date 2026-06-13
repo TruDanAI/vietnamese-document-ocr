@@ -8,6 +8,7 @@ from app.evaluation.normalize import (
     normalize_tax_code,
     normalize_text,
 )
+from app.evaluation.diagnostics import write_diagnostics_report
 from app.evaluation.report import write_reports
 from app.evaluation.run import REPO_ROOT, run_evaluation
 from app.services.extraction.rules import ExtractedFieldResult
@@ -86,3 +87,90 @@ def test_evaluation_report_writes_json_and_markdown(tmp_path: Path) -> None:
     markdown = markdown_path.read_text(encoding="utf-8")
     assert "Evaluation Report - mock" in markdown
     assert "OCR Model: `mock_synthetic`" in markdown
+
+
+def test_diagnostics_report_writes_failed_sample_details(tmp_path: Path) -> None:
+    report = {
+        "engine": "fake",
+        "model_name": "fake_model",
+        "documents": [
+            {
+                "sample_id": "invoice-failed",
+                "document_type": "invoice",
+                "engine_name": "fake",
+                "model_name": "fake_model",
+                "ocr_block_count": 3,
+                "ocr_text_lines": [
+                    "CÔNG TY TNHH DEMO OCR",
+                    "Số hóa đơn: HD-001",
+                    "Ngày lập: 12/06/2026",
+                ],
+                "passed": False,
+                "fields": [
+                    {
+                        "field_name": "supplier_name",
+                        "expected": "CONG TY TNHH DEMO OCR",
+                        "actual": "CONG TY TNHH DEMO OCR",
+                        "exact_match": True,
+                        "normalized_match": True,
+                        "missing": False,
+                        "wrong": False,
+                    },
+                    {
+                        "field_name": "document_number",
+                        "expected": "HD-001",
+                        "actual": "HD-002",
+                        "exact_match": False,
+                        "normalized_match": False,
+                        "missing": False,
+                        "wrong": True,
+                    },
+                    {
+                        "field_name": "document_date",
+                        "expected": "12/06/2026",
+                        "actual": None,
+                        "exact_match": False,
+                        "normalized_match": False,
+                        "missing": True,
+                        "wrong": False,
+                    },
+                ],
+            }
+        ],
+    }
+
+    diagnostics_path = write_diagnostics_report(report, tmp_path)
+
+    assert diagnostics_path.exists()
+    assert diagnostics_path.name.endswith("-fake-diagnostics.md")
+    markdown = diagnostics_path.read_text(encoding="utf-8")
+    assert "sample_id: `invoice-failed`" in markdown
+    assert "engine_name: `fake`" in markdown
+    assert "model_name: `fake_model`" in markdown
+    assert "Exact Accuracy: 33.33%" in markdown
+    assert "Normalized Accuracy: 33.33%" in markdown
+    assert "OCR Block Count: 3" in markdown
+    assert "CÔNG TY TNHH DEMO OCR" in markdown
+    assert "cong ty tnhh demo ocr" in markdown
+    assert "| document_number | `HD-001` | `HD-002` | wrong |" in markdown
+    assert "| document_date | `12/06/2026` |  | missing |" in markdown
+    assert "Missing Fields: 1" in markdown
+    assert "Wrong Fields: 1" in markdown
+    assert "Likely Failure Category: extraction rule miss" in markdown
+
+
+def test_diagnostics_report_can_run_for_mock_engine(tmp_path: Path) -> None:
+    report = run_evaluation(
+        engine="mock",
+        dataset_dir=REPO_ROOT / "data" / "eval",
+        storage_dir=tmp_path / "storage",
+    )
+
+    diagnostics_path = write_diagnostics_report(report, tmp_path)
+
+    assert diagnostics_path.exists()
+    assert diagnostics_path.name.endswith("-mock-diagnostics.md")
+    markdown = diagnostics_path.read_text(encoding="utf-8")
+    assert "Evaluation Diagnostics - mock" in markdown
+    assert "model_name: `mock_synthetic`" in markdown
+    assert "No failed samples." in markdown

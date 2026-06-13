@@ -3,6 +3,7 @@ import mimetypes
 from pathlib import Path
 
 from app.evaluation.dataset import EvalSample, load_eval_samples
+from app.evaluation.diagnostics import write_diagnostics_report
 from app.evaluation.metrics import compare_fields
 from app.evaluation.report import build_report, write_reports
 from app.models import OcrBlock
@@ -26,6 +27,11 @@ def main() -> None:
     )
     parser.add_argument("--dataset-dir", default=str(DEFAULT_DATASET_DIR))
     parser.add_argument("--storage-dir", default=str(DEFAULT_STORAGE_DIR))
+    parser.add_argument(
+        "--diagnostics",
+        action="store_true",
+        help="Write a failed-sample diagnostics markdown report.",
+    )
     args = parser.parse_args()
 
     try:
@@ -38,6 +44,7 @@ def main() -> None:
         parser.exit(2, f"error: {exc}\n")
     report_dir = Path(args.storage_dir) / "eval_reports"
     json_path, markdown_path = write_reports(report, report_dir)
+    diagnostics_path = write_diagnostics_report(report, report_dir) if args.diagnostics else None
     summary = report["summary"]
     print(f"Evaluation complete for engine={args.engine}")
     print(f"OCR model: {report['model_name']}")
@@ -46,6 +53,8 @@ def main() -> None:
     print(f"Normalized match accuracy: {summary['normalized_match_accuracy']:.2%}")
     print(f"JSON report: {json_path}")
     print(f"Markdown report: {markdown_path}")
+    if diagnostics_path:
+        print(f"Diagnostics report: {diagnostics_path}")
 
 
 def run_evaluation(*, engine: str, dataset_dir: Path, storage_dir: Path) -> dict:
@@ -101,9 +110,11 @@ def _evaluate_sample(
         "source_file": str(sample.source_file),
         "expected_file": str(sample.expected_file),
         "engine": engine_name,
+        "engine_name": engine_name,
         "model_name": model_name,
         "page_count": len(pages),
         "ocr_block_count": len(blocks),
+        "ocr_text_lines": [block.text for block in blocks],
         "average_extraction_confidence": _average([comparison.confidence for comparison in comparisons]),
         "passed": all(comparison.normalized_match for comparison in comparisons),
         "fields": fields,
