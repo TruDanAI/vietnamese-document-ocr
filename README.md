@@ -251,6 +251,8 @@ Safe synthetic samples live under `data/samples/`:
 - `invoice-synthetic.pdf`
 - `smoke-demo-invoice.png`
 - `smoke-demo-invoice.pdf`
+- `smoke-demo-invoice-accented.png`
+- `smoke-demo-invoice-accented.pdf`
 - `receipt-synthetic.png`
 - `delivery-note-synthetic.png`
 
