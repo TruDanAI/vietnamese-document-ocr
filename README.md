@@ -366,6 +366,30 @@ The runner writes:
 - Markdown report: quick human-readable summary.
 - OCR metadata: `engine` and `model_name` at the report and document level.
 
+### Real OCR Diagnostics
+
+Add `--diagnostics` to write a failed-sample diagnostic report:
+
+```powershell
+cd backend
+python -m app.evaluation.run --engine mock --diagnostics
+.\.venv\Scripts\python.exe -m app.evaluation.run --engine paddle --diagnostics
+.\.venv\Scripts\python.exe -m app.evaluation.run --engine ppocrv6 --diagnostics
+```
+
+Diagnostic reports are written to:
+
+```text
+storage/dev/eval_reports/<timestamp>-<engine>-diagnostics.md
+```
+
+Generated evaluation and diagnostic reports are local artifacts ignored by git
+and should not be committed. Diagnostics show failed samples, OCR text previews,
+expected vs extracted fields, and simple failure categories. They explain why a
+run failed but do not improve accuracy by themselves. Real PaddleOCR and
+PP-OCRv6 results remain weak until later extraction and preprocessing
+milestones.
+
 The frontend also has a small report list at:
 
 ```text
