@@ -485,6 +485,43 @@ The frontend also has a small report list at:
 http://localhost:3000/evaluations
 ```
 
+### Local Anonymized Real-Document Smoke Test
+
+Use the local private sample harness only with 1-3 already-anonymized
+Vietnamese business documents. Private samples are read from:
+
+```text
+storage/dev/private_samples/
+```
+
+Reports are written to:
+
+```text
+storage/dev/eval_reports/
+```
+
+Rendered pages are written to:
+
+```text
+storage/dev/pages/
+```
+
+Example commands:
+
+```powershell
+cd backend
+python -m app.evaluation.private_samples --engine mock
+python -m app.evaluation.private_samples --engine paddle
+python -m app.evaluation.private_samples --engine ppocrv6
+python -m app.evaluation.private_samples --engine mock --include-ocr-preview
+```
+
+Raw OCR preview is excluded by default. Use `--include-ocr-preview` only for
+local debugging because reports may contain extracted sensitive data. Private
+samples, rendered pages, and reports are ignored by git and must not be
+committed. Follow `docs/real-document-local-test-protocol.md` before adding any
+local private sample.
+
 ### How To Read Metrics
 
 - `exact_match_accuracy`: strict value match after trimming only.
