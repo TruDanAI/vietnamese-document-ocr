@@ -47,6 +47,13 @@ data/      safe synthetic sample documents
 docs/      project notes placeholder
 ```
 
+## Source Safety Registry
+
+Before adding new Vietnamese document samples, templates, or local-only OCR
+test inputs, check `docs/vietnamese-document-source-registry.md`. It lists the
+approved source categories, privacy risks, and rules for what may be committed
+versus kept under ignored local paths.
+
 ## Backend Setup
 
 ```powershell
