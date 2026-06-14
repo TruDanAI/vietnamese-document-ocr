@@ -1,0 +1,7 @@
+{
+  "sample_id": "delivery-note-stress-demo",
+  "document_type": "delivery_note",
+  "eval_mode": "real_ocr",
+  "source_file": "../../samples/delivery-note-stress-demo.png",
+  "expected_file": "../expected/delivery-note-stress-demo.expected.json"
+}

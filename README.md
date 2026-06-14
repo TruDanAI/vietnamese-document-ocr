@@ -250,13 +250,16 @@ Safe synthetic samples live under `data/samples/`:
 - `invoice-synthetic.png`
 - `invoice-synthetic.pdf`
 - `invoice-demo-diacritics.png`
+- `invoice-stress-demo.png`
 - `smoke-demo-invoice.png`
 - `smoke-demo-invoice.pdf`
 - `smoke-demo-invoice-accented.png`
 - `smoke-demo-invoice-accented.pdf`
 - `receipt-demo-diacritics.png`
+- `receipt-stress-demo.png`
 - `receipt-synthetic.png`
 - `delivery-note-demo-diacritics.png`
+- `delivery-note-stress-demo.png`
 - `delivery-note-synthetic.png`
 
 These files do not contain real customer, citizen ID, tax, invoice, or private
@@ -273,33 +276,39 @@ data/eval/
     invoice-demo-diacritics.sample.json
     invoice-alt-labels.sample.json
     invoice-split-values.sample.json
+    invoice-stress-demo.sample.json
     invoice-synthetic.sample.json
   receipt/
     receipt-demo-diacritics.sample.json
     receipt-discount.sample.json
     receipt-marketplace.sample.json
+    receipt-stress-demo.sample.json
     receipt-synthetic.sample.json
   delivery_note/
     delivery-note-demo-diacritics.sample.json
     delivery-note-split-sender.sample.json
+    delivery-note-stress-demo.sample.json
     delivery-note-synthetic.sample.json
     delivery-note-warehouse.sample.json
   expected/
     invoice-demo-diacritics.expected.json
     invoice-alt-labels.expected.json
     invoice-split-values.expected.json
+    invoice-stress-demo.expected.json
     invoice-synthetic.expected.json
     receipt-demo-diacritics.expected.json
     receipt-discount.expected.json
     receipt-marketplace.expected.json
+    receipt-stress-demo.expected.json
     receipt-synthetic.expected.json
     delivery-note-demo-diacritics.expected.json
     delivery-note-split-sender.expected.json
+    delivery-note-stress-demo.expected.json
     delivery-note-synthetic.expected.json
     delivery-note-warehouse.expected.json
 ```
 
-The current dataset has 12 synthetic samples: 4 invoices, 4 receipts, and 4
+The current dataset has 15 synthetic samples: 5 invoices, 5 receipts, and 5
 delivery notes. Some variants reuse safe synthetic image placeholders while mock
 OCR emits deterministic variant text by `sample_id`.
 
@@ -314,10 +323,13 @@ Each sample declares an `eval_mode`:
 Current real OCR-compatible fixtures:
 
 - `delivery-note-demo-diacritics`
+- `delivery-note-stress-demo`
 - `delivery-note-synthetic`
 - `invoice-demo-diacritics`
+- `invoice-stress-demo`
 - `invoice-synthetic`
 - `receipt-demo-diacritics`
+- `receipt-stress-demo`
 
 Current mock-only fixtures:
 
@@ -328,6 +340,11 @@ Current mock-only fixtures:
 - `receipt-synthetic`
 - `delivery-note-split-sender`
 - `delivery-note-warehouse`
+
+The `*-stress-demo` fixtures are synthetic-only OCR stress samples. They use
+fake demo entities, mild lower contrast, smaller text, slight rotation, a narrow
+receipt layout, and table-like rows. They are intended to reveal preprocessing
+and extraction weaknesses, not to claim production OCR accuracy.
 
 Each `*.sample.json` declares:
 
@@ -386,7 +403,7 @@ python -m pip install paddlepaddle==3.3.0 -i https://www.paddlepaddle.org.cn/pac
 python -m app.evaluation.run --engine ppocrv6
 ```
 
-Real OCR engines evaluate only the 5 synthetic `real_ocr` fixtures by default,
+Real OCR engines evaluate only the 8 synthetic `real_ocr` fixtures by default,
 skip the remaining 7 `mock_only` fixtures, and report the skipped sample count.
 To force a diagnostic run across every fixture, use:
 
@@ -433,10 +450,11 @@ storage/dev/eval_reports/<timestamp>-<engine>-diagnostics.md
 Generated evaluation and diagnostic reports are local artifacts ignored by git
 and should not be committed. Diagnostics show failed samples, OCR text previews,
 expected vs extracted fields, and simple failure categories. They explain why a
-run failed but do not improve accuracy by themselves. Diagnostics also list
-skipped mock-only fixtures for real OCR engines. Real PaddleOCR and PP-OCRv6
-results remain smoke/evaluation aids until later extraction and preprocessing
-milestones.
+run failed but do not improve accuracy by themselves. Stress-fixture failures
+should guide future preprocessing and extraction improvements. Diagnostics also
+list skipped mock-only fixtures for real OCR engines. Real PaddleOCR and
+PP-OCRv6 results remain smoke/evaluation aids until later extraction and
+preprocessing milestones.
 
 The frontend also has a small report list at:
 
@@ -461,7 +479,7 @@ http://localhost:3000/evaluations
 Current synthetic dataset baseline after Milestone 4 rules:
 
 ```text
-Documents passed: 12/12
+Documents passed: 15/15
 Exact match accuracy: 100.00%
 Normalized match accuracy: 100.00%
 Missing fields: 0
@@ -475,7 +493,7 @@ not match inside `Subtotal`.
 
 This is an extractor regression baseline, not a real OCR benchmark. PaddleOCR
 and PP-OCRv6 smoke results should be reported separately from the mock baseline.
-Mock 12/12 and real OCR document counts should not be compared directly unless
+Mock 15/15 and real OCR document counts should not be compared directly unless
 the same fixture set is evaluated in both runs.
 
 ## Demo Workflow
@@ -501,7 +519,7 @@ pytest
 Expected current result:
 
 ```text
-34 passed
+35 passed
 ```
 
 Frontend verification:
@@ -528,7 +546,7 @@ npm run build
   The adapter now sets that default unless the caller already chose a value.
 - Evaluation results in mock mode measure pipeline correctness, not real OCR
   accuracy, because mock OCR emits deterministic synthetic text.
-- The current 12-sample dataset is too small to claim production accuracy.
+- The current 15-sample dataset is too small to claim production accuracy.
 - Known weak fields for real OCR are likely `supplier_name`, `notes`, and
   monetary fields when table layout, OCR noise, or page geometry separates
   labels and values in ways not represented by the synthetic fixtures.
@@ -538,7 +556,7 @@ npm run build
 
 ## Next Recommended Milestone
 
-- Expand the synthetic evaluation dataset from 12 to 20-30 files across receipts,
+- Expand the synthetic evaluation dataset from 15 to 20-30 files across receipts,
   invoices, delivery notes, and price-list-like documents.
 - Run PaddleOCR mode on those samples and document installation/runtime issues.
 - Add document-type-specific extraction templates.

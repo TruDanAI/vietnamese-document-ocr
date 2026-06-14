@@ -14,19 +14,22 @@ Each sample declares an `eval_mode`:
 - `real_ocr`: the visible image/PDF content matches the expected JSON. PaddleOCR
   and PP-OCRv6 evaluate only these fixtures by default.
 
-The current dataset has 12 synthetic samples:
+The current dataset has 15 synthetic samples:
 
-- 4 invoice variants
-- 4 receipt variants
-- 4 delivery-note variants
+- 5 invoice variants
+- 5 receipt variants
+- 5 delivery-note variants
 
 Real OCR-compatible fixtures:
 
 - `delivery-note-demo-diacritics`
+- `delivery-note-stress-demo`
 - `delivery-note-synthetic`
 - `invoice-demo-diacritics`
+- `invoice-stress-demo`
 - `invoice-synthetic`
 - `receipt-demo-diacritics`
+- `receipt-stress-demo`
 
 Mock-only fixtures:
 
@@ -65,6 +68,13 @@ OCR adapter emits deterministic fake text based on `sample_id`. Those variants
 remain useful for extraction regression but are not fair real OCR fixtures unless
 their visible content is regenerated to match their expected JSON.
 
+The `invoice-stress-demo`, `receipt-stress-demo`, and
+`delivery-note-stress-demo` fixtures are realistic synthetic stress samples.
+They use fake demo entities only, mild lower contrast, smaller text, slight
+rotation, a narrow receipt layout, and table-like rows. They do not contain
+real documents, real customer data, CCCD/CMND values, phone numbers, bank
+accounts, or QR codes.
+
 Evaluation reports include OCR metadata:
 
 - `engine=mock`, `model_name=mock_synthetic` for deterministic mock runs.
@@ -77,6 +87,7 @@ real customer documents, CCCD/CMND samples, or generated OCR artifacts here.
 
 Real OCR reports are synthetic-only smoke/evaluation aids. Real OCR engines
 skip the 7 `mock_only` fixtures by default, and those skips are expected. Do not
-compare the mock 12/12 baseline directly with PaddleOCR or PP-OCRv6 unless all
+compare the mock 15/15 baseline directly with PaddleOCR or PP-OCRv6 unless all
 runs use the same fixture set, and do not treat these synthetic results as a
-production accuracy claim.
+production accuracy claim. Stress-fixture failures should guide future
+preprocessing and extraction improvements.

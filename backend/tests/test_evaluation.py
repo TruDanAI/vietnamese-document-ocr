@@ -15,6 +15,24 @@ from app.evaluation.run import REPO_ROOT, run_evaluation, select_eval_samples
 from app.services.extraction.rules import ExtractedFieldResult
 
 
+REAL_OCR_FIXTURE_IDS = {
+    "delivery-note-demo-diacritics",
+    "delivery-note-stress-demo",
+    "delivery-note-synthetic",
+    "invoice-demo-diacritics",
+    "invoice-stress-demo",
+    "invoice-synthetic",
+    "receipt-demo-diacritics",
+    "receipt-stress-demo",
+}
+
+STRESS_FIXTURE_IDS = {
+    "delivery-note-stress-demo",
+    "invoice-stress-demo",
+    "receipt-stress-demo",
+}
+
+
 def test_normalization_functions_handle_vietnamese_business_values() -> None:
     assert normalize_money("1.100.000 VND") == "1100000"
     assert normalize_money("1,100,000") == "1100000"
@@ -66,9 +84,9 @@ def test_mock_evaluation_generates_perfect_synthetic_report(tmp_path: Path) -> N
 
     assert report["engine"] == "mock"
     assert report["model_name"] == "mock_synthetic"
-    assert report["summary"]["total_documents"] == 12
+    assert report["summary"]["total_documents"] == 15
     assert report["summary"]["skipped_documents"] == 0
-    assert report["summary"]["passed_documents"] == 12
+    assert report["summary"]["passed_documents"] == 15
     assert report["summary"]["exact_match_accuracy"] == 1.0
     assert report["summary"]["normalized_match_accuracy"] == 1.0
     assert report["field_metrics"]["tax_code"]["missing_count"] == 0
@@ -85,30 +103,43 @@ def test_eval_sample_metadata_separates_mock_only_and_real_ocr_fixtures() -> Non
     assert by_id["invoice-demo-diacritics"].eval_mode == EVAL_MODE_REAL_OCR
     assert by_id["receipt-demo-diacritics"].eval_mode == EVAL_MODE_REAL_OCR
     assert by_id["delivery-note-synthetic"].eval_mode == EVAL_MODE_REAL_OCR
+    assert by_id["delivery-note-stress-demo"].eval_mode == EVAL_MODE_REAL_OCR
+    assert by_id["invoice-stress-demo"].eval_mode == EVAL_MODE_REAL_OCR
+    assert by_id["receipt-stress-demo"].eval_mode == EVAL_MODE_REAL_OCR
     assert by_id["invoice-alt-labels"].eval_mode == EVAL_MODE_MOCK_ONLY
     assert by_id["invoice-split-values"].eval_mode == EVAL_MODE_MOCK_ONLY
     assert by_id["receipt-synthetic"].eval_mode == EVAL_MODE_MOCK_ONLY
 
 
-def test_new_real_ocr_fixture_files_and_expected_metadata_align() -> None:
+def test_real_ocr_fixture_files_and_expected_metadata_align() -> None:
     samples = load_eval_samples(REPO_ROOT / "data" / "eval")
     by_id = {sample.sample_id: sample for sample in samples}
-    new_fixture_ids = {
-        "delivery-note-demo-diacritics",
-        "invoice-demo-diacritics",
-        "receipt-demo-diacritics",
-    }
 
-    for sample_id in new_fixture_ids:
+    for sample_id in REAL_OCR_FIXTURE_IDS:
         sample = by_id[sample_id]
         assert sample.eval_mode == EVAL_MODE_REAL_OCR
         assert sample.source_file.name == f"{sample_id}.png"
         assert sample.expected_file.name == f"{sample_id}.expected.json"
         assert sample.source_file.exists()
         assert sample.expected_file.exists()
+        assert sample.expected_fields["currency"] == "VND"
+
+
+def test_realistic_stress_fixture_files_exist_and_are_referenced_correctly() -> None:
+    samples = load_eval_samples(REPO_ROOT / "data" / "eval")
+    by_id = {sample.sample_id: sample for sample in samples}
+
+    for sample_id in STRESS_FIXTURE_IDS:
+        sample = by_id[sample_id]
+        assert sample.eval_mode == EVAL_MODE_REAL_OCR
+        assert sample.source_file.parent == REPO_ROOT / "data" / "samples"
+        assert sample.source_file.name == f"{sample_id}.png"
+        assert sample.expected_file.parent == REPO_ROOT / "data" / "eval" / "expected"
+        assert sample.expected_file.name == f"{sample_id}.expected.json"
+        assert sample.source_file.exists()
+        assert sample.expected_file.exists()
         assert sample.expected_fields["tax_code"] == "0000000000"
         assert sample.expected_fields["document_number"].startswith("DEMO-")
-        assert sample.expected_fields["currency"] == "VND"
 
 
 def test_mock_engine_includes_mock_only_fixtures_by_default() -> None:
@@ -116,7 +147,7 @@ def test_mock_engine_includes_mock_only_fixtures_by_default() -> None:
 
     selected, skipped = select_eval_samples(samples, engine="mock")
 
-    assert len(selected) == 12
+    assert len(selected) == 15
     assert skipped == []
     assert any(sample.eval_mode == EVAL_MODE_MOCK_ONLY for sample in selected)
 
@@ -127,13 +158,7 @@ def test_real_ocr_engines_skip_mock_only_fixtures_by_default() -> None:
     for engine in ("paddle", "ppocrv6"):
         selected, skipped = select_eval_samples(samples, engine=engine)
 
-        assert {sample.sample_id for sample in selected} == {
-            "delivery-note-demo-diacritics",
-            "delivery-note-synthetic",
-            "invoice-demo-diacritics",
-            "invoice-synthetic",
-            "receipt-demo-diacritics",
-        }
+        assert {sample.sample_id for sample in selected} == REAL_OCR_FIXTURE_IDS
         assert len(skipped) == 7
         assert all(item["eval_mode"] == EVAL_MODE_MOCK_ONLY for item in skipped)
 
@@ -143,7 +168,7 @@ def test_real_ocr_engines_can_explicitly_include_mock_only_fixtures() -> None:
 
     selected, skipped = select_eval_samples(samples, engine="paddle", include_mock_only=True)
 
-    assert len(selected) == 12
+    assert len(selected) == 15
     assert skipped == []
 
 
