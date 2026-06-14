@@ -11,6 +11,8 @@ LABEL_WORD_MIN_SIMILARITY = 0.66
 LABEL_MIN_AVERAGE_SIMILARITY = 0.82
 AMOUNT_VALUE_PATTERN = r"([0-9][0-9.,\s]*)"
 DOCUMENT_NUMBER_VALUE_PATTERN = r"([A-Za-z0-9][A-Za-z0-9\-\/]*)"
+DOCUMENT_NUMBER_REJECT_VALUES = {"giao", "xuat", "nhap", "so", "phieu", "hoa", "don", "bien", "lai"}
+CURRENCY_PATTERN = r"\b(?:VND|VNĐ|USD)\b|₫"
 SUPPLIER_LABELS = (
     "Đơn vị bán",
     "Don vi ban",
@@ -71,7 +73,7 @@ SUBTOTAL_LABELS = (
     "Thanh tien",
 )
 VAT_LABELS = ("VAT", "Thuế GTGT", "Thue GTGT")
-TOTAL_LABELS = (
+TOTAL_PAYABLE_LABELS = (
     "Tổng thanh toán",
     "Tong thanh toán",
     "Tong thanh toan",
@@ -81,10 +83,15 @@ TOTAL_LABELS = (
     "Can thanh toan",
     "Tổng phải trả",
     "Tong phai tra",
+    "Thành tiền thanh toán",
+    "Thanh tien thanh toan",
+)
+TOTAL_WEAK_LABELS = (
     "Total",
     "Thanh toán",
     "Thanh toan",
 )
+TOTAL_LABELS = TOTAL_PAYABLE_LABELS + TOTAL_WEAK_LABELS
 NOTES_LABELS = ("Ghi chú", "Ghi chu", "Note", "Ghi nhận", "Ghi nhan")
 
 FIELD_NAMES = [
@@ -122,9 +129,11 @@ def extract_fields(blocks: list[OcrBlock]) -> list[ExtractedFieldResult]:
     total_amount = _find_labeled_amount(
         blocks,
         text,
-        TOTAL_LABELS,
+        TOTAL_PAYABLE_LABELS,
         prefer_last=True,
     )
+    if total_amount is None:
+        total_amount = _find_labeled_amount(blocks, text, TOTAL_WEAK_LABELS, prefer_last=True)
     currency = _normalize_currency(_find(r"\b(VND|VNĐ|USD)\b", text) or "VND")
     notes = _find_labeled_value(blocks, text, NOTES_LABELS, r"(.+)")
 
@@ -171,7 +180,7 @@ def _find_document_date(blocks: list[OcrBlock], text: str) -> str | None:
 def _find_labeled_amount(
     blocks: list[OcrBlock], text: str, labels: tuple[str, ...], *, prefer_last: bool = False
 ) -> str | None:
-    values = _find_labeled_values(blocks, text, labels, AMOUNT_VALUE_PATTERN)
+    values = _find_labeled_amount_values(blocks, labels)
     if not values:
         return None
     value = values[-1] if prefer_last else values[0]
@@ -184,8 +193,8 @@ def _find_document_number(blocks: list[OcrBlock]) -> str | None:
             block.text, DOCUMENT_DATE_LABELS
         ):
             continue
-        value = _find_labeled_value_in_line(block.text, DOCUMENT_NUMBER_LABELS, DOCUMENT_NUMBER_VALUE_PATTERN)
-        value = value or _find_next_line_value(blocks, index, block, DOCUMENT_NUMBER_LABELS, DOCUMENT_NUMBER_VALUE_PATTERN)
+        value = _find_document_number_value_in_line(block.text, DOCUMENT_NUMBER_LABELS)
+        value = value or _find_next_document_number_value(blocks, index, DOCUMENT_NUMBER_LABELS)
         value = value or _find_generic_document_number(blocks, index)
         value = _clean_document_number(value)
         if value:
@@ -225,6 +234,16 @@ def _find_labeled_values(
     return values
 
 
+def _find_labeled_amount_values(blocks: list[OcrBlock], labels: tuple[str, ...]) -> list[str]:
+    values = []
+    for index, block in enumerate(blocks):
+        value = _find_labeled_amount_in_line(block.text, labels)
+        value = value or _find_next_line_amount(blocks, index, block, labels)
+        if value:
+            values.append(value)
+    return values
+
+
 def _find_next_line_value(
     blocks: list[OcrBlock], index: int, block: OcrBlock, labels: tuple[str, ...], value_pattern: str
 ) -> str | None:
@@ -237,8 +256,33 @@ def _find_next_line_value(
     return match.group(1).strip() if match else None
 
 
+def _find_next_line_amount(blocks: list[OcrBlock], index: int, block: OcrBlock, labels: tuple[str, ...]) -> str | None:
+    if index + 1 >= len(blocks) or not _line_is_label_only(block.text, labels):
+        return None
+    next_text = blocks[index + 1].text.strip()
+    if not _is_standalone_amount_value(next_text):
+        return None
+    match = re.search(AMOUNT_VALUE_PATTERN, next_text, flags=REGEX_FLAGS)
+    return match.group(1).strip() if match else None
+
+
+def _find_labeled_amount_in_line(text: str, labels: tuple[str, ...]) -> str | None:
+    inline_pattern = rf"^\s*(?:{_label_regex(labels)})\s*(?::|：|\s[-–—]\s|\s+)\s*{AMOUNT_VALUE_PATTERN}"
+    value = _find(inline_pattern, text)
+    if value and _is_amount_value(_value_with_amount_suffix(text, value)):
+        return value
+
+    if not _line_starts_with_label(text, labels):
+        return None
+    separator_value = _value_after_separator(text)
+    if separator_value is None or not _is_amount_value(separator_value):
+        return None
+    match = re.search(AMOUNT_VALUE_PATTERN, separator_value, flags=REGEX_FLAGS)
+    return match.group(1).strip() if match else None
+
+
 def _find_labeled_value_in_line(text: str, labels: tuple[str, ...], value_pattern: str) -> str | None:
-    inline_pattern = rf"(?<![A-Za-z])(?:{_label_regex(labels)})\s*[:\-]?\s*{value_pattern}"
+    inline_pattern = rf"^\s*(?:{_label_regex(labels)})\s*[:\-]?\s*{value_pattern}"
     value = _find(inline_pattern, text)
     if value:
         return value
@@ -252,6 +296,32 @@ def _find_labeled_value_in_line(text: str, labels: tuple[str, ...], value_patter
     return match.group(1).strip() if match else None
 
 
+def _find_document_number_value_in_line(text: str, labels: tuple[str, ...]) -> str | None:
+    inline_pattern = rf"^\s*(?:{_label_regex(labels)})\s*(?::|：|\s[-–—]\s)\s*{DOCUMENT_NUMBER_VALUE_PATTERN}"
+    value = _find(inline_pattern, text)
+    value = _clean_document_number(value)
+    if value:
+        return value
+
+    if not _line_starts_with_label(text, labels):
+        return None
+    separator_value = _value_after_separator(text)
+    if separator_value is None:
+        return None
+    match = re.search(DOCUMENT_NUMBER_VALUE_PATTERN, separator_value, flags=REGEX_FLAGS)
+    return _clean_document_number(match.group(1).strip()) if match else None
+
+
+def _find_next_document_number_value(blocks: list[OcrBlock], index: int, labels: tuple[str, ...]) -> str | None:
+    if index + 1 >= len(blocks) or not _line_is_label_only(blocks[index].text, labels):
+        return None
+    next_text = blocks[index + 1].text.strip()
+    if _looks_like_labeled_line(next_text):
+        return None
+    match = re.search(DOCUMENT_NUMBER_VALUE_PATTERN, next_text, flags=REGEX_FLAGS)
+    return _clean_document_number(match.group(1).strip()) if match else None
+
+
 def _find_generic_document_number(blocks: list[OcrBlock], index: int) -> str | None:
     block = blocks[index]
     if not _line_is_exact_generic_document_number_label(block.text):
@@ -260,8 +330,8 @@ def _find_generic_document_number(blocks: list[OcrBlock], index: int) -> str | N
     separator_value = _value_after_separator(block.text)
     if separator_value:
         match = re.search(DOCUMENT_NUMBER_VALUE_PATTERN, separator_value, flags=REGEX_FLAGS)
-        return match.group(1).strip() if match else None
-    return _find_next_line_value(blocks, index, block, GENERIC_DOCUMENT_NUMBER_LABELS, DOCUMENT_NUMBER_VALUE_PATTERN)
+        return _clean_document_number(match.group(1).strip()) if match else None
+    return _find_next_document_number_value(blocks, index, GENERIC_DOCUMENT_NUMBER_LABELS)
 
 
 def _clean_document_number(value: str | None) -> str | None:
@@ -271,6 +341,10 @@ def _clean_document_number(value: str | None) -> str | None:
     if not value:
         return None
     if re.fullmatch(r"\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}", value):
+        return None
+    if _normalize_label_text(value) in DOCUMENT_NUMBER_REJECT_VALUES:
+        return None
+    if not re.search(r"\d", value):
         return None
     digits = re.sub(r"\D", "", value)
     if digits and digits == re.sub(r"[\s\-\.]", "", value) and len(digits) in {10, 13}:
@@ -316,6 +390,22 @@ def _line_is_exact_generic_document_number_label(text: str) -> bool:
     return _normalize_label_text(prefix) == "so"
 
 
+def _looks_like_labeled_line(text: str) -> bool:
+    if not _value_after_separator(text):
+        return False
+    label_groups = (
+        SUPPLIER_LABELS,
+        TAX_CODE_LABELS,
+        DOCUMENT_DATE_LABELS,
+        DOCUMENT_NUMBER_LABELS,
+        SUBTOTAL_LABELS,
+        VAT_LABELS,
+        TOTAL_LABELS,
+        NOTES_LABELS,
+    )
+    return any(_line_starts_with_label(text, labels) for labels in label_groups)
+
+
 def _label_matches_tokens(label: str, line_tokens: list[str], *, require_exact_length: bool) -> bool:
     label_tokens = _normalized_label_tokens(label)
     if not label_tokens:
@@ -358,47 +448,58 @@ def _normalize_label_text(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().casefold()
 
 
+def _value_with_amount_suffix(text: str, value: str) -> str:
+    value_index = text.find(value)
+    if value_index < 0:
+        return value
+    return text[value_index:].strip()
+
+
+def _is_amount_value(value: str) -> bool:
+    value = value.strip()
+    if not re.search(r"\d", value) or "%" in value:
+        return False
+    if re.search(CURRENCY_PATTERN, value, flags=REGEX_FLAGS):
+        return True
+    if re.search(r"\d{1,3}(?:[.,]\d{3})+", value):
+        return True
+    digits = re.sub(r"\D", "", value)
+    return len(digits) >= 4
+
+
+def _is_standalone_amount_value(value: str) -> bool:
+    if _value_after_separator(value):
+        return False
+    without_currency = re.sub(CURRENCY_PATTERN, "", value, flags=REGEX_FLAGS)
+    if re.search(r"[A-Za-zÀ-ỹ]", without_currency):
+        return False
+    return _is_amount_value(value)
+
+
 def _supplier_fallback_candidate(text: str) -> bool:
     normalized = _normalize_label_text(text)
     if not normalized:
         return False
     if re.fullmatch(r"[\d\s.,]+(?:vnd)?", text.strip(), flags=REGEX_FLAGS):
         return False
+    if _value_after_separator(text):
+        return False
+    title_phrases = ("hoa don", "bien lai", "phieu giao", "phieu xuat", "phieu nhap")
+    if any(phrase in normalized for phrase in title_phrases):
+        return False
+    table_headers = {"mo ta", "sl", "don gia", "don vi", "thanh tien", "so luong", "hang demo", "vat"}
+    if normalized in table_headers:
+        return False
 
-    ignored_tokens = (
-        "phieu",
-        "hoa don",
-        "bien lai",
-        "ban hang",
-        "mst",
-        "ma so thue",
-        "tax code",
-        "so chung tu",
-        "so hoa don",
-        "so bien lai",
-        "so phieu",
-        "so luong",
-        "ngay",
-        "date",
-        "tam tinh",
-        "tm tinh",
-        "cong tien hang",
-        "cng tin hang",
-        "tong tien hang",
-        "subtotal",
-        "vat",
-        "tong",
-        "total",
-        "ghi chu",
-        "ghi nhan",
-        "note",
-        "mo ta",
-        "sl",
-        "don gia",
-        "don vi",
-        "thanh tien",
+    non_supplier_label_groups = (
+        TAX_CODE_LABELS,
+        DOCUMENT_DATE_LABELS,
+        DOCUMENT_NUMBER_LABELS,
+        SUBTOTAL_LABELS,
+        TOTAL_LABELS,
+        NOTES_LABELS,
     )
-    return not any(token in normalized for token in ignored_tokens)
+    return not any(_line_starts_with_label(text, labels) for labels in non_supplier_label_groups)
 
 
 def _normalize_currency(value: str) -> str:
