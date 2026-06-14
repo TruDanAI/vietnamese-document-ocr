@@ -200,3 +200,138 @@ def test_prefers_final_payable_total_when_multiple_total_like_amounts_exist() ->
     )
 
     assert fields["total_amount"] == "900000"
+
+
+def test_matches_noisy_vietnamese_labels_without_changing_values() -> None:
+    fields = fields_from_lines(
+        [
+            "HÓA DO'N BÁN HÀNG",
+            "Đo'n v bán: CÔNG TY TNHH DEMO OCR",
+            "MST: 0000000000",
+            "Sô hóa đon: DEMO-INV-010",
+            "Ngày: 14/06/2026",
+            "Cng tin hàng: 1.250.000 VND",
+            "Thu GTGT: 125.000 VND",
+            "Tồng thanh toán: 1.375.000 VND",
+            "Ghi chú: Hóa đon stress synthetic",
+        ]
+    )
+
+    assert fields["supplier_name"] == "CÔNG TY TNHH DEMO OCR"
+    assert fields["document_number"] == "DEMO-INV-010"
+    assert fields["subtotal"] == "1250000"
+    assert fields["vat_amount"] == "125000"
+    assert fields["total_amount"] == "1375000"
+    assert fields["notes"] == "Hóa đon stress synthetic"
+
+
+def test_extracts_noisy_split_label_values_from_adjacent_blocks() -> None:
+    fields = fields_from_lines(
+        [
+            "BIÊN LAI BÁN HÀNG",
+            "CÙA HÀNG DEMO",
+            "MST: 0000000000",
+            "Sô biên lai:",
+            "DEMO-REC-010",
+            "Ngày bán: 14/06/2026",
+            "Tm tính:",
+            "80.000 VND",
+            "VAT:",
+            "0 VND",
+            "Tồng cng:",
+            "80.000 VND",
+        ]
+    )
+
+    assert fields["document_number"] == "DEMO-REC-010"
+    assert fields["subtotal"] == "80000"
+    assert fields["vat_amount"] == "0"
+    assert fields["total_amount"] == "80000"
+
+
+def test_extracts_noisy_delivery_note_labels() -> None:
+    fields = fields_from_lines(
+        [
+            "PHIÉU GIAO HÀNG",
+            "Nguòi gi: KHO DEMO",
+            "MST: 0000000000",
+            "Sô phiu giao: DEMO-DN-010",
+            "Ngày giao hàng: 14/06/2026",
+            "Tm tính:",
+            "540.000 VND",
+            "Cn thanh toán:",
+            "594.000 VND",
+            "Ghi nhn: Giao hàng stress synthetic",
+        ]
+    )
+
+    assert fields["supplier_name"] == "KHO DEMO"
+    assert fields["document_number"] == "DEMO-DN-010"
+    assert fields["subtotal"] == "540000"
+    assert fields["total_amount"] == "594000"
+    assert fields["notes"] == "Giao hàng stress synthetic"
+
+
+def test_document_number_generic_so_does_not_confuse_tax_code_date_or_quantity() -> None:
+    fields = fields_from_lines(
+        [
+            "MST: 0000000000",
+            "Ngày: 14/06/2026",
+            "Só lưong",
+            "03",
+            "Số:",
+            "DEMO-DOC-010",
+        ]
+    )
+
+    assert fields["tax_code"] == "0000000000"
+    assert fields["document_date"] == "14/06/2026"
+    assert fields["document_number"] == "DEMO-DOC-010"
+
+
+def test_document_number_remains_empty_for_tax_code_and_date_only() -> None:
+    fields = fields_from_lines(
+        [
+            "MST: 0000000000",
+            "Ngày: 14/06/2026",
+            "Só lưong: 03",
+        ]
+    )
+
+    assert fields["document_number"] is None
+
+
+def test_noisy_total_prefers_payable_total_when_subtotal_is_present() -> None:
+    fields = fields_from_lines(
+        [
+            "Tm tính:",
+            "80.000 VND",
+            "VAT:",
+            "0 VND",
+            "Tồng cng:",
+            "80.000 VND",
+        ]
+    )
+
+    assert fields["subtotal"] == "80000"
+    assert fields["total_amount"] == "80000"
+
+
+def test_supplier_fallback_skips_invoice_and_delivery_titles() -> None:
+    receipt_fields = fields_from_lines(
+        [
+            "BIÊN LAI BÁN HÀNG",
+            "CÙA HÀNG DEMO",
+            "MST: 0000000000",
+        ]
+    )
+    delivery_fields = fields_from_lines(
+        [
+            "PHIÉU GIAO HÀNG",
+            "KHO DEMO",
+            "MST: 0000000000",
+        ]
+    )
+
+    assert receipt_fields["supplier_name"] == "CÙA HÀNG DEMO"
+    assert delivery_fields["supplier_name"] == "KHO DEMO"

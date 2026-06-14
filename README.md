@@ -346,6 +346,18 @@ fake demo entities, mild lower contrast, smaller text, slight rotation, a narrow
 receipt layout, and table-like rows. They are intended to reveal preprocessing
 and extraction weaknesses, not to claim production OCR accuracy.
 
+Milestone 11 added small rule-based robustness fixes for those stress samples:
+accent-insensitive label comparison, conservative fuzzy matching for mildly
+corrupted Vietnamese labels, adjacent block label/value extraction, guarded
+document-number handling for `Số` / `So` variants, payable-total preference
+when subtotal labels are also present, and supplier fallback that skips invoice,
+receipt, and delivery-note title lines when a better candidate exists.
+
+In a local synthetic-only smoke run on 14/06/2026, PaddleOCR and experimental
+PP-OCRv6 diagnostics passed all 8 `real_ocr` fixtures, including the 3 stress
+fixtures. This remains a synthetic evaluation result only. It does not use real
+customer documents and is not a production OCR accuracy claim.
+
 Each `*.sample.json` declares:
 
 ```json
@@ -547,9 +559,10 @@ npm run build
 - Evaluation results in mock mode measure pipeline correctness, not real OCR
   accuracy, because mock OCR emits deterministic synthetic text.
 - The current 15-sample dataset is too small to claim production accuracy.
-- Known weak fields for real OCR are likely `supplier_name`, `notes`, and
-  monetary fields when table layout, OCR noise, or page geometry separates
-  labels and values in ways not represented by the synthetic fixtures.
+- Rule-based extraction can still miss `supplier_name`, `notes`, document
+  numbers, and monetary fields when OCR omits the value text entirely, severely
+  corrupts a label beyond the conservative variants covered here, or separates
+  labels and values in layouts not represented by the synthetic fixtures.
 - No authentication or multi-user workflow yet.
 - No PII workflow. Do not upload real CCCD or sensitive customer documents.
 - No RAG, vector database, chatbot, Fanpage, or Zalo integration.
