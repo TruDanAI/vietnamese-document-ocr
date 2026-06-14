@@ -106,9 +106,21 @@ cd backend
 .\.venv\Scripts\python.exe -m app.evaluation.run --engine ppocrv6 --diagnostics
 ```
 
-Real-document testing may require a separate local-only script or a manual
-upload flow if the current evaluation dataset does not include private samples.
-Do not add private samples to `data/eval/` or `data/samples/`.
+Run the local-only private sample harness when the current evaluation dataset
+does not include the anonymized private samples:
+
+```powershell
+cd backend
+python -m app.evaluation.private_samples --engine mock
+.\.venv\Scripts\python.exe -m app.evaluation.private_samples --engine paddle
+.\.venv\Scripts\python.exe -m app.evaluation.private_samples --engine ppocrv6
+```
+
+The harness reads from `storage/dev/private_samples/`, writes reports under
+`storage/dev/eval_reports/`, and writes rendered pages under
+`storage/dev/pages/`. Raw OCR preview is excluded by default; add
+`--include-ocr-preview` only for local debugging. Do not add private samples to
+`data/eval/` or `data/samples/`.
 
 ## Reporting Rules
 
