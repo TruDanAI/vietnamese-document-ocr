@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "supplier_name": "CỬA HÀNG DEMO",
+    "tax_code": "0000000000",
+    "document_number": "DEMO-REC-010",
+    "document_date": "14/06/2026",
+    "subtotal": "80000",
+    "vat_amount": "0",
+    "total_amount": "80000",
+    "currency": "VND",
+    "notes": "Biên lai stress synthetic"
+  }
+}

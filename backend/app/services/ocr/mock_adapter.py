@@ -32,6 +32,21 @@ class MockOcrAdapter(OcrAdapter):
 
 def _lines_for_path(page_path: str) -> list[str]:
     normalized = page_path.lower()
+    if "invoice-stress-demo" in normalized:
+        return [
+            "HÓA ĐƠN BÁN HÀNG",
+            "Đơn vị bán: CÔNG TY TNHH DEMO OCR",
+            "MST: 0000000000",
+            "Số hóa đơn: DEMO-INV-010",
+            "Ngày: 14/06/2026",
+            "Mô tả | SL | Đơn giá | Thành tiền",
+            "Dịch vụ demo A | 1 | 750.000 | 750.000",
+            "Dịch vụ demo B | 2 | 250.000 | 500.000",
+            "Cộng tiền hàng: 1.250.000 VND",
+            "Thuế GTGT: 125.000 VND",
+            "Tổng thanh toán: 1.375.000 VND",
+            "Ghi chú: Hóa đơn stress synthetic",
+        ]
     if "invoice-demo-diacritics" in normalized:
         return [
             "HÓA ĐƠN BÁN HÀNG",
@@ -108,6 +123,20 @@ def _lines_for_path(page_path: str) -> list[str]:
             "Tong cong: 320.000 VND",
             "Ghi chu: Bán hàng demo OCR",
         ]
+    if "receipt-stress-demo" in normalized:
+        return [
+            "BIÊN LAI BÁN HÀNG",
+            "CỬA HÀNG DEMO",
+            "MST: 0000000000",
+            "Số biên lai: DEMO-REC-010",
+            "Ngày bán: 14/06/2026",
+            "Cà phê demo: 45.000 VND",
+            "Bánh demo: 35.000 VND",
+            "Tạm tính: 80.000 VND",
+            "VAT: 0 VND",
+            "Tổng cộng: 80.000 VND",
+            "Ghi chú: Biên lai stress synthetic",
+        ]
     if "delivery-note-split-sender" in normalized:
         return [
             "PHIEU GIAO HANG",
@@ -129,6 +158,21 @@ def _lines_for_path(page_path: str) -> list[str]:
             "Thanh tien: 640000 VND",
             "Tong phai tra: 640000 VND",
             "Ghi chu: Hang synthetic noi bo",
+        ]
+    if "delivery-note-stress-demo" in normalized:
+        return [
+            "PHIẾU GIAO HÀNG",
+            "Người gửi: KHO DEMO",
+            "MST: 0000000000",
+            "Số phiếu giao: DEMO-DN-010",
+            "Ngày giao hàng: 14/06/2026",
+            "Hàng demo | Số lượng | Đơn vị | Thành tiền",
+            "Thùng demo A | 03 | thùng | 300.000",
+            "Kiện demo B | 02 | kiện | 240.000",
+            "Tạm tính: 540.000 VND",
+            "VAT: 54.000 VND",
+            "Cần thanh toán: 594.000 VND",
+            "Ghi nhận: Giao hàng stress synthetic",
         ]
     if "delivery-note-demo-diacritics" in normalized:
         return [

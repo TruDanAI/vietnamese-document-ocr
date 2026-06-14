@@ -1,0 +1,7 @@
+{
+  "sample_id": "invoice-stress-demo",
+  "document_type": "invoice",
+  "eval_mode": "real_ocr",
+  "source_file": "../../samples/invoice-stress-demo.png",
+  "expected_file": "../expected/invoice-stress-demo.expected.json"
+}
