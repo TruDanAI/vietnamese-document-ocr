@@ -346,6 +346,10 @@ fake demo entities, mild lower contrast, smaller text, slight rotation, a narrow
 receipt layout, and table-like rows. They are intended to reveal preprocessing
 and extraction weaknesses, not to claim production OCR accuracy.
 
+For future local-only testing with 1-3 anonymized real Vietnamese business
+documents, follow `docs/real-document-local-test-protocol.md`. Do not commit
+private samples or generated OCR output from those tests.
+
 Milestone 11 added small rule-based robustness fixes for those stress samples:
 accent-insensitive label comparison, conservative fuzzy matching for mildly
 corrupted Vietnamese labels, adjacent block label/value extraction, guarded

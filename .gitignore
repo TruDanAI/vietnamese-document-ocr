@@ -23,6 +23,8 @@ storage/dev/uploads/*
 storage/dev/exports/*
 storage/dev/pages/*
 storage/dev/eval_reports/*
+storage/dev/private_samples/
+storage/dev/private_samples/**
 !storage/dev/uploads/.gitkeep
 !storage/dev/exports/.gitkeep
 !storage/dev/pages/.gitkeep
