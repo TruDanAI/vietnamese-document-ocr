@@ -335,3 +335,90 @@ def test_supplier_fallback_skips_invoice_and_delivery_titles() -> None:
 
     assert receipt_fields["supplier_name"] == "CÙA HÀNG DEMO"
     assert delivery_fields["supplier_name"] == "KHO DEMO"
+
+
+def test_document_number_does_not_extract_label_suffix_words() -> None:
+    for label in ("So phieu giao", "So phieu xuat", "Số phiếu giao", "Số phiếu xuất"):
+        fields = fields_from_lines(
+            [
+                label,
+                "MST: 0000000000",
+                "Ngày: 14/06/2026",
+            ]
+        )
+
+        assert fields["document_number"] is None
+
+
+def test_monetary_fields_ignore_metadata_counters_and_rates() -> None:
+    fields = fields_from_lines(
+        [
+            "Total items: 3",
+            "VAT rate: 10%",
+            "Subtotal rows: 4",
+        ]
+    )
+
+    assert fields["total_amount"] is None
+    assert fields["vat_amount"] is None
+    assert fields["subtotal"] is None
+
+
+def test_adjacent_amount_extraction_rejects_unrelated_numeric_blocks() -> None:
+    fields = fields_from_lines(
+        [
+            "Tổng cộng:",
+            "Số lượng: 3",
+            "Ghi chú demo",
+        ]
+    )
+
+    assert fields["total_amount"] is None
+
+
+def test_total_prefers_payable_total_over_later_payment_status() -> None:
+    fields = fields_from_lines(
+        [
+            "Tong cong: 100.000 VND",
+            "Da thanh toan: 10.000 VND",
+        ]
+    )
+
+    assert fields["total_amount"] == "100000"
+
+
+def test_supplier_fallback_rejects_buyer_address_and_title_lines() -> None:
+    fields = fields_from_lines(
+        [
+            "HÓA ĐƠN BÁN HÀNG",
+            "Khách hàng: CÔNG TY MUA HÀNG",
+            "Địa chỉ: 123 Đường Demo",
+        ]
+    )
+
+    assert fields["supplier_name"] is None
+
+
+def test_supplier_fallback_allows_names_with_total_or_vat_like_substrings() -> None:
+    total_like_fields = fields_from_lines(
+        [
+            "CÔNG TY TNHH TỔNG HỢP DEMO",
+            "MST: 0000000000",
+        ]
+    )
+    vat_like_fields = fields_from_lines(
+        [
+            "CONG TY VAT LIEU DEMO",
+            "MST: 0000000000",
+        ]
+    )
+    explicit_label_fields = fields_from_lines(
+        [
+            "Đơn vị bán: CÔNG TY TNHH TỔNG HỢP DEMO",
+            "MST: 0000000000",
+        ]
+    )
+
+    assert total_like_fields["supplier_name"] == "CÔNG TY TNHH TỔNG HỢP DEMO"
+    assert vat_like_fields["supplier_name"] == "CONG TY VAT LIEU DEMO"
+    assert explicit_label_fields["supplier_name"] == "CÔNG TY TNHH TỔNG HỢP DEMO"
